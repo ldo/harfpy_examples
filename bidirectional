@@ -2,8 +2,9 @@
 #+
 # HarfPy example: laying out and rendering a line of bidirectional text.
 # The Arabic text will come out correctly with DejaVu Sans, but it will
-# look much better if you install Khaled Hosny’s Amiri font. On a
-# Debian system, this comes in the “fonts-hosny-amiri” package.
+# look much better if you install Khaled Hosny’s Amiri font
+# <http://www.amirifont.org/>. On a Debian system, this comes in
+# the “fonts-hosny-amiri” package.
 #
 # Copyright 2016 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
 # script is licensed CC0
