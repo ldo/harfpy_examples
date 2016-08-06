@@ -8,5 +8,8 @@ These scripts will also need the following additional Python bindings:
   binding for FreeType
 * [PyBidi](https://github.com/ldo/pybidi) -- my binding for FriBidi.
 
+Some of them will give best results if your system has certain fonts installed--
+see the header comments for details.
+
 Lawrence D'Oliveiro <ldo@geek-central.gen.nz>
 2016 August 6
