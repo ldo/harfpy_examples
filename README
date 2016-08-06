@@ -11,5 +11,8 @@ These scripts will also need the following additional Python bindings:
 Some of them will give best results if your system has certain fonts installed--
 see the header comments for details.
 
+Alternatively, you can see the generated output on my [DeviantArt
+account](http://default-cube.deviantart.com/gallery/59919308/HarfPy-Examples).
+
 Lawrence D'Oliveiro <ldo@geek-central.gen.nz>
 2016 August 6
