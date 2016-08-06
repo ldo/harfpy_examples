@@ -34,6 +34,7 @@ book_title_arabic = \
         " \u0648\u0627\u0644\u0645\u0642\u0627\u0628\u0644\u0629" # “wa’l-muqabala”
     )
 book_title_roman = "Al-Kitab al-Mukhtasar Fi Hisab al-Jabr Wa’l-Muqabala"
+book_title_english = "The Compendious Book on Calculation by Completion and Balancing"
 author_arabic = \
     (
         "\u0645\u062d\u0645\u062f" # “Muhammad’
@@ -65,10 +66,11 @@ ft_face = ft.find_face("Amiri")
 ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
 hb_font = hb.Font.ft_create(ft_face)
 glyph_lines = []
-line_spacing = Vector(0, ft_face.size["metrics"]["height"]) * 1.2
-line_pos = Vector(0, 0) + line_spacing * Vector(1, 0.8)
+line_spacing = Vector(0, ft_face.size["metrics"]["height"])
+line_pos = Vector(0, 0) + line_spacing * Vector(1, 0.4 - 1)
 max_line_width = 0
 for text_line in text_lines :
+    line_pos += line_spacing
     buf.reset()
     bidi_types = fb.get_bidi_types(text_line)
     base_dir, embedding_levels = \
@@ -103,11 +105,10 @@ for text_line in text_lines :
         glyphs.extend(new_glyphs)
     #end for
     max_line_width = max(max_line_width, glyph_pos.x)
-    line_pos += line_spacing
     glyph_lines.append(glyphs)
 #end for
 qah_face = qah.FontFace.create_for_ft_face(ft_face)
-margin = Vector(10, 10)
+margin = Vector(20, 20)
 figure_dimensions = round(Vector(max_line_width, line_pos.y) + 2 * margin)
 pix = qah.ImageSurface.create \
   (
