@@ -46,10 +46,9 @@ features_try = \
     (
         {"text" : "To Waffle", "font" : "DejaVu Serif", "features" : (b'kern', b'liga')},
         {"text" : "Some Text", "font" : "FreeSerif", "features" : (b'smcp',)},
-        {"text" : "Possess", "font" : "EB Garamond", "features" : (b'cv01',)},
+        {"text" : "star actress", "font" : "EB Garamond", "features" : (b'cv01', b'hlig')},
           # 'cv01' is old-style non-terminal “s”
         {"text" : "Quality", "font" : "EB Garamond", "features" : (b'calt',)},
-        {"text" : "acta standard", "font" : "EB Garamond", "features" : (b'hlig',)},
         {"text" : "some text", "font" : "Pecita", "features" : (b'calt', b'smcp')},
     )
 
