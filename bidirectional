@@ -1,0 +1,130 @@
+#!/usr/bin/python3
+#+
+# HarfPy example: laying out and rendering a line of bidirectional text.
+#
+# Copyright 2016 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
+# script is licensed CC0
+# <https://creativecommons.org/publicdomain/zero/1.0/>; do with it
+# what you will.
+#-
+
+import sys
+import os
+import math
+# import freetype2 as ft # use Qahirah instance
+import qahirah as qah
+from qahirah import \
+    CAIRO, \
+    Colour, \
+    Glyph, \
+    Vector
+ft = qah.get_ft_lib()
+import fribidi as fb
+from fribidi import \
+    FRIBIDI as FB
+import harfbuzz as hb
+
+book_title_arabic = \
+    (
+        "\u0627\u0644\u0643\u062a\u0627\u0628" # “al-kitab”
+        " \u0627\u0644\u0645\u062e\u062a\u0635\u0631" # “al-mukhtasar”
+        " \u0641\u064a" # “fi”
+        " \u062d\u0633\u0627\u0628" # “hisab”
+        " \u0627\u0644\u062c\u0628\u0631" # “al-jabr”
+        " \u0648\u0627\u0644\u0645\u0642\u0627\u0628\u0644\u0629" # “wa’l-muqabala”
+    )
+book_title_roman = "Al-Kitab al-Mukhtasar Fi Hisab al-Jabr Wa’l-Muqabala"
+author_arabic = \
+    (
+        "\u0645\u062d\u0645\u062f" # “Muhammad’
+        " \u0628\u0646" # “ibn”
+        " \u0645\u0648\u0633\u0649" # “Musa”
+        " \u0627\u0644\u062e\u0648\u0627\u0631\u0632\u0645\u06cc" # “al-Khwarizmi”
+    )
+author_roman = "Muhammad ibn Musa al-Khwarizmi"
+text_lines = []
+for author, book_title in \
+    (
+        (author_arabic, book_title_arabic),
+        (author_roman, book_title_roman),
+    ) \
+:
+    text_lines.append \
+        (
+            "The book “%(title)s” gives us the word “algebra”,"
+            " its author’s name %(author)s gives us “algorithm”."
+        %
+            {"author" : author, "title" : book_title}
+        )
+#end for
+base_rtl = False
+
+text_size = 36
+buf = hb.Buffer.create()
+ft_face = ft.find_face("Amiri")
+ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
+hb_font = hb.Font.ft_create(ft_face)
+glyph_lines = []
+line_spacing = Vector(0, ft_face.size["metrics"]["height"]) * 1.2
+line_pos = Vector(0, 0) + line_spacing * Vector(1, 0.8)
+max_line_width = 0
+for text_line in text_lines :
+    buf.reset()
+    bidi_types = fb.get_bidi_types(text_line)
+    base_dir, embedding_levels = \
+        fb.get_par_embedding_levels(bidi_types, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])[1:]
+    vis_line, map = fb.reorder_line \
+      (
+        flags = FB.FLAGS_DEFAULT,
+        bidi_types = bidi_types,
+        line_offset = 0,
+        base_dir = base_dir,
+        embedding_levels = embedding_levels,
+        logical_str = text_line,
+        map = fb.Reordering.identity(text_line)
+      )[1:]
+    vis_bidi_types = map.apply(bidi_types)
+    vis_embedding_levels = map.apply(embedding_levels)
+    base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
+    glyphs = []
+    glyph_pos = line_pos
+    for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
+        buf.reset()
+        buf.add_str(substr)
+        if FB.LEVEL_IS_RTL(level) :
+            # HarfBuzz always wants to start with logical order, not display order,
+            # so undo FriBidi reordering
+            buf.reverse()
+        #end if
+        buf.guess_segment_properties()
+        hb.shape(hb_font, buf)
+        new_glyphs, end_glyph_pos = buf.get_glyphs(glyph_pos)
+        glyph_pos = end_glyph_pos
+        glyphs.extend(new_glyphs)
+    #end for
+    max_line_width = max(max_line_width, glyph_pos.x)
+    line_pos += line_spacing
+    glyph_lines.append(glyphs)
+#end for
+qah_face = qah.FontFace.create_for_ft_face(ft_face)
+margin = Vector(10, 10)
+figure_dimensions = round(Vector(max_line_width, line_pos.y) + 2 * margin)
+pix = qah.ImageSurface.create \
+  (
+    format = CAIRO.FORMAT_RGB24,
+    dimensions = figure_dimensions
+  )
+ctx = \
+    (qah.Context.create(pix)
+        .translate(margin)
+        .set_source_colour(Colour.grey(1))
+        .paint()
+        .set_source_colour(Colour.grey(0))
+        .set_font_face(qah_face)
+        .set_font_size(text_size)
+    )
+for glyphs in glyph_lines :
+    ctx.show_glyphs(glyphs)
+#end for
+pix.flush().write_to_png("%s.png" % os.path.basename(sys.argv[0]))
+#hb_font = None # crashes otherwise?
