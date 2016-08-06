@@ -49,7 +49,7 @@ features_try = \
         {"text" : "star actress", "font" : "EB Garamond", "features" : (b'cv01', b'hlig')},
           # 'cv01' is old-style non-terminal “s”
         {"text" : "Quality", "font" : "EB Garamond", "features" : (b'calt',)},
-        {"text" : "some text", "font" : "Pecita", "features" : (b'calt', b'smcp')},
+        {"text" : "Some Text", "font" : "Pecita", "features" : (b'calt', b'smcp')},
     )
 
 text_size = 48
