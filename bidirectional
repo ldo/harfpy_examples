@@ -131,4 +131,3 @@ for glyphs in glyph_lines :
     ctx.show_glyphs(glyphs)
 #end for
 pix.flush().write_to_png("%s.png" % os.path.basename(sys.argv[0]))
-#hb_font = None # crashes otherwise?
