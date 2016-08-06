@@ -1,0 +1,12 @@
+Here are some examples of the use of [HarfPy](https://github.com/ldo/harfpy),
+my Python 3 binding for [HarfBuzz](https://www.freedesktop.org/wiki/Software/HarfBuzz/).
+These scripts will also need the following additional Python bindings:
+
+* [Qahirah](https://github.com/ldo/qahirah) -- my binding for the
+  Cairo graphics library
+* [python_freetype](https://github.com/ldo/python_freetype) -- my
+  binding for FreeType
+* [PyBidi](https://github.com/ldo/pybidi) -- my binding for FriBidi.
+
+Lawrence D'Oliveiro <ldo@geek-central.gen.nz>
+2016 August 6
