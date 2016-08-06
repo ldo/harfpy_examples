@@ -1,0 +1,133 @@
+#!/usr/bin/python3
+#+
+# HarfPy example: try font features. The features demonstrated are specific
+# to the following fonts, which come from the corresponding Debian packages:
+#
+#    DejaVu Sans   fonts-dejavu-core
+#    FreeSerif     fonts-freefont-otf
+#    EB Garamond   fonts-ebgaramond
+#    Pecita        fonts-pecita
+#
+# One useful OpenType font features registry
+# is here <https://www.microsoft.com/typography/otspec/featurelist.htm>.
+#-
+
+import sys
+import os
+import math
+# import freetype2 as ft # use Qahirah instance
+import qahirah as qah
+from qahirah import \
+    CAIRO, \
+    Colour, \
+    Glyph, \
+    Vector
+ft = qah.get_ft_lib()
+import harfbuzz as hb
+
+def each_feature_combination(feature_list) :
+    "returns every combination of on/off settings for the features in the" \
+    " given list."
+    if len(feature_list) != 0 :
+        f = feature_list[0]
+        rest = feature_list[1:]
+        for enabled in (False, True) :
+            setting = hb.Feature(tag = hb.HB.TAG(f), value = int(enabled), start = 0, end = 0xFFFFFFFF)
+            for setting_rest in each_feature_combination(rest) :
+                yield (setting,) + setting_rest
+            #end for
+        #end for
+    else :
+        yield ()
+    #end if
+#end each_feature_combination
+
+features_try = \
+    (
+        {"text" : "To Waffle", "font" : "DejaVu Serif", "features" : (b'kern', b'liga')},
+        {"text" : "Some Text", "font" : "FreeSerif", "features" : (b'smcp',)},
+        {"text" : "Possess", "font" : "EB Garamond", "features" : (b'cv01',)},
+          # 'cv01' is old-style non-terminal “s”
+        {"text" : "Quality", "font" : "EB Garamond", "features" : (b'calt',)},
+        {"text" : "acta standard", "font" : "EB Garamond", "features" : (b'hlig',)},
+        {"text" : "some text", "font" : "Pecita", "features" : (b'calt', b'smcp')},
+    )
+
+text_size = 48
+label_font = \
+    (qah.Context.create_for_dummy()
+        .set_font_face(qah.FontFace.create_for_pattern("Sans Serif"))
+        .set_font_size(text_size / 2)
+    ).scaled_font
+buf = hb.Buffer.create()
+
+lines = []
+line_pos = Vector(0, 0)
+max_label_width = 0
+max_line_width = 0
+for feature_try in features_try :
+    ft_face = ft.find_face(feature_try["font"])
+    ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
+    hb_font = hb.Font.ft_create(ft_face)
+    features = feature_try["features"]
+    for settings in each_feature_combination(features) :
+        buf.reset()
+        buf.add_str(feature_try["text"])
+        buf.guess_segment_properties()
+        hb.shape(hb_font, buf, settings)
+        line, line_end = buf.get_glyphs(line_pos)
+        label = \
+            (
+                "%s, %s:"
+            %
+                (ft_face.family_name, ", ".join(f.to_string() for f in settings))
+            )
+        max_label_width = max(max_label_width, label_font.text_extents(label).x_advance)
+        max_line_width = max(max_line_width, line_end.x)
+        lines.append \
+          (
+            {
+                "font" :
+                    (qah.Context.create_for_dummy()
+                        .set_font_face(qah.FontFace.create_for_ft_face(ft_face))
+                        .set_font_size(text_size)
+                    ).scaled_font,
+                "text" : line,
+                "label" : label,
+                "line_pos" : line_pos,
+            }
+          )
+        line_pos = Vector(0, line_pos.y + ft_face.size["metrics"]["height"])
+    #end for
+#end for
+
+margin = Vector(10, 10)
+label_gap = 40
+figure_size = Vector(max_label_width + label_gap + max_line_width, line_pos.y) + 2 * margin
+pix = qah.ImageSurface.create \
+  (
+    format = CAIRO.FORMAT_RGB24,
+    dimensions = round(figure_size)
+  )
+ctx = \
+    (qah.Context.create(pix)
+        .translate(margin + Vector(0, text_size * 0.8))
+        .set_source_colour(Colour.grey(1))
+        .paint()
+        .set_source_colour(Colour.grey(0))
+    )
+for line in lines :
+    ctx.set_scaled_font(label_font)
+    label = line["label"]
+    ctx.move_to \
+      (
+            line["line_pos"]
+        +
+            Vector(max_label_width - label_font.text_extents(label).x_advance, 0)
+      )
+    ctx.show_text(label)
+    ctx.set_scaled_font(line["font"])
+    ctx.show_glyphs(tuple(Glyph(g.index, g.pos + Vector(max_label_width + label_gap, 0)) for g in line["text"]))
+#end for
+pix.flush().write_to_png("%s.png" % os.path.basename(sys.argv[0]))
+hb_font = None # prevents crash at end?
