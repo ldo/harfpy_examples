@@ -10,6 +10,11 @@
 #
 # One useful OpenType font features registry
 # is here <https://www.microsoft.com/typography/otspec/featurelist.htm>.
+#
+# Copyright 2016 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
+# script is licensed CC0
+# <https://creativecommons.org/publicdomain/zero/1.0/>; do with it
+# what you will.
 #-
 
 import sys
