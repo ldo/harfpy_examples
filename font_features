@@ -38,8 +38,14 @@ def each_feature_combination(feature_list) :
     if len(feature_list) != 0 :
         f = feature_list[0]
         rest = feature_list[1:]
-        for enabled in (False, True) :
-            setting = hb.Feature(tag = hb.HB.TAG(f), value = int(enabled), start = 0, end = 0xFFFFFFFF)
+        if isinstance(f, tuple) :
+            maxval = f[1]
+            f = f[0]
+        else :
+            maxval = 1
+        #end if
+        for val in range(maxval + 1) :
+            setting = hb.Feature(tag = hb.HB.TAG(f), value = val, start = 0, end = 0xFFFFFFFF)
             for setting_rest in each_feature_combination(rest) :
                 yield (setting,) + setting_rest
             #end for
