@@ -3,12 +3,13 @@
 # HarfPy example: try font features. The features demonstrated are specific
 # to the following fonts:
 #
-#    Name          Further Info                             Debian Package
-#    ====          ============                             ==============
-#    DejaVu Sans   http://dejavu-fonts.org/wiki/Main_Page   fonts-dejavu-core
-#    FreeSerif     https://www.gnu.org/software/freefont/   fonts-freefont-otf
-#    EB Garamond   http://www.georgduffner.at/ebgaramond/   fonts-ebgaramond
-#    Pecita        http://pecita.eu/                        fonts-pecita
+#    Name               Further Info                             Debian Package
+#    ====               ============                             ==============
+#    DejaVu Sans        http://dejavu-fonts.org/wiki/Main_Page   fonts-dejavu-core
+#    FreeSerif          https://www.gnu.org/software/freefont/   fonts-freefont-otf
+#    Linux Libertine O  http://www.linuxlibertine.org/           fonts-linuxlibertine
+#    EB Garamond        http://www.georgduffner.at/ebgaramond/   fonts-ebgaramond
+#    Pecita             http://pecita.eu/                        fonts-pecita
 #
 # One useful OpenType font features registry
 # is here <https://www.microsoft.com/typography/otspec/featurelist.htm>.
