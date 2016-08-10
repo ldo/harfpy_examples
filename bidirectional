@@ -28,6 +28,10 @@ from fribidi import \
     FRIBIDI as FB
 import harfbuzz as hb
 
+U_LTRO = "\u202d" # left-to-right override
+U_RTLO = "\u202e" # right-to-left override
+U_PDF = "\u202c" # pop directional formatting
+
 book_title_arabic = \
     (
         "\u0627\u0644\u0643\u062a\u0627\u0628" # “al-kitab”
@@ -48,18 +52,23 @@ author_arabic = \
     )
 author_roman = "Muhammad ibn Musa al-Khwarizmi"
 text_lines = []
-for author, book_title in \
+for author, book_title, bidi in \
     (
-        (author_arabic, book_title_arabic),
-        (author_roman, book_title_roman),
+        (author_arabic, book_title_arabic, True),
+        (author_roman, book_title_roman, True),
+        #(author_roman, book_title_english, True),
+        #(author_arabic, book_title_arabic, False),
     ) \
 :
     text_lines.append \
         (
-            "The book “%(title)s” gives us the word “algebra”,"
-            " its author’s name %(author)s gives us “algorithm”."
-        %
-            {"author" : author, "title" : book_title}
+            (
+                    "The book “%(title)s” gives us the word “algebra”,"
+                    " its author’s name %(author)s gives us “algorithm”."
+                %
+                    {"author" : author, "title" : book_title},
+                bidi
+            )
         )
 #end for
 base_rtl = False
@@ -69,49 +78,64 @@ buf = hb.Buffer.create()
 ft_face = ft.find_face("Amiri")
 ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
 hb_font = hb.Font.ft_create(ft_face)
+qah_face = qah.FontFace.create_for_ft_face(ft_face)
 glyph_lines = []
 line_spacing = Vector(0, ft_face.size["metrics"]["height"])
 line_pos = Vector(0, 0) + line_spacing * Vector(1, 0.4 - 1)
 max_line_width = 0
-for text_line in text_lines :
+for text_line, bidi in text_lines :
     line_pos += line_spacing
-    buf.reset()
-    bidi_types = fb.get_bidi_types(text_line)
-    base_dir, embedding_levels = \
-        fb.get_par_embedding_levels(bidi_types, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])[1:]
-    vis_line, map = fb.reorder_line \
-      (
-        flags = FB.FLAGS_DEFAULT,
-        bidi_types = bidi_types,
-        line_offset = 0,
-        base_dir = base_dir,
-        embedding_levels = embedding_levels,
-        logical_str = text_line,
-        map = fb.Reordering.identity(text_line)
-      )[1:]
-    vis_bidi_types = map.apply(bidi_types)
-    vis_embedding_levels = map.apply(embedding_levels)
-    base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
-    glyphs = []
-    glyph_pos = line_pos
-    for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
+    if bidi :
         buf.reset()
-        buf.add_str(substr)
-        if FB.LEVEL_IS_RTL(level) :
-            # HarfBuzz always wants to start with logical order, not display order,
-            # so undo FriBidi reordering
-            buf.reverse()
-        #end if
-        buf.guess_segment_properties()
-        hb.shape(hb_font, buf)
-        new_glyphs, end_glyph_pos = buf.get_glyphs(glyph_pos)
-        glyph_pos = end_glyph_pos
-        glyphs.extend(new_glyphs)
-    #end for
+        bidi_types = fb.get_bidi_types(text_line)
+        base_dir, embedding_levels = \
+            fb.get_par_embedding_levels(bidi_types, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])[1:]
+        vis_line, map = fb.reorder_line \
+          (
+            flags = FB.FLAGS_DEFAULT,
+            bidi_types = bidi_types,
+            line_offset = 0,
+            base_dir = base_dir,
+            embedding_levels = embedding_levels,
+            logical_str = text_line,
+            map = fb.Reordering.identity(text_line)
+          )[1:]
+        vis_bidi_types = map.apply(bidi_types)
+        vis_embedding_levels = map.apply(embedding_levels)
+        base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
+        glyphs = []
+        glyph_pos = line_pos
+        for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
+            sys.stderr.write("substr[%d:%d] dir %s\n" % (pos1, pos2, ("LTR", "RTL")[FB.LEVEL_IS_RTL(level)]))
+            buf.reset()
+            buf.add_str(substr)
+            if FB.LEVEL_IS_RTL(level) :
+                # HarfBuzz always wants to start with logical order, not display order,
+                # so undo FriBidi reordering
+                buf.reverse()
+            #end if
+            buf.guess_segment_properties()
+            hb.shape(hb_font, buf)
+            new_glyphs, end_glyph_pos = buf.get_glyphs(glyph_pos)
+            glyph_pos = end_glyph_pos
+            glyphs.extend(new_glyphs)
+        #end for
+    else :
+        ctx = \
+            (qah.Context.create_for_dummy()
+                .set_font_face(qah_face)
+                .set_font_size(text_size)
+            )
+        glyphs = ctx.scaled_font.text_to_glyphs \
+          (
+            pos = line_pos,
+            text = text_line
+          )[0]
+        glyph_pos = ctx.glyph_extents(glyphs).advance
+    #end if
     max_line_width = max(max_line_width, glyph_pos.x)
     glyph_lines.append(glyphs)
 #end for
-qah_face = qah.FontFace.create_for_ft_face(ft_face)
 margin = Vector(20, 20)
 figure_dimensions = round(Vector(max_line_width, line_pos.y) + 2 * margin)
 pix = qah.ImageSurface.create \
