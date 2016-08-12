@@ -55,18 +55,25 @@ text_lines = []
 for author, book_title, bidi in \
     (
         (author_arabic, book_title_arabic, True),
-        (author_roman, book_title_roman, True),
+        (author_roman, book_title_roman, False),
         #(author_roman, book_title_english, True),
         #(author_arabic, book_title_arabic, False),
     ) \
 :
+    if bidi :
+        dir_prefix = ""
+        dir_postfix = ""
+    else :
+        dir_prefix = U_LTRO
+        dir_postfix = U_PDF
+    #end if
     text_lines.append \
         (
             (
                     "The book “%(title)s” gives us the word “algebra”,"
                     " its author’s name %(author)s gives us “algorithm”."
                 %
-                    {"author" : author, "title" : book_title},
+                    {"author" : dir_prefix + author + dir_postfix, "title" : dir_prefix + book_title + dir_postfix},
                 bidi
             )
         )
@@ -85,7 +92,7 @@ line_pos = Vector(0, 0) + line_spacing * Vector(1, 0.4 - 1)
 max_line_width = 0
 for text_line, bidi in text_lines :
     line_pos += line_spacing
-    if bidi :
+    if True : # bidi :
         buf.reset()
         bidi_types = fb.get_bidi_types(text_line)
         base_dir, embedding_levels = \
@@ -115,6 +122,10 @@ for text_line, bidi in text_lines :
                 buf.reverse()
             #end if
             buf.guess_segment_properties()
+            buf.direction = (hb.HB.DIRECTION_LTR, hb.HB.DIRECTION_RTL)[FB.LEVEL_IS_RTL(level)]
+            if not bidi :
+                buf.script = hb.HB.SCRIPT_COMMON # disable shaping
+            #end if
             hb.shape(hb_font, buf)
             new_glyphs, end_glyph_pos = buf.get_glyphs(glyph_pos)
             glyph_pos = end_glyph_pos
