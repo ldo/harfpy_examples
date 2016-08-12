@@ -64,6 +64,7 @@ for author, book_title, bidi in \
         dir_prefix = ""
         dir_postfix = ""
     else :
+        # force everything to go left-to-right
         dir_prefix = U_LTRO
         dir_postfix = U_PDF
     #end if
@@ -85,68 +86,56 @@ buf = hb.Buffer.create()
 ft_face = ft.find_face("Amiri")
 ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
 hb_font = hb.Font.ft_create(ft_face)
-qah_face = qah.FontFace.create_for_ft_face(ft_face)
 glyph_lines = []
 line_spacing = Vector(0, ft_face.size["metrics"]["height"])
 line_pos = Vector(0, 0) + line_spacing * Vector(1, 0.4 - 1)
 max_line_width = 0
 for text_line, bidi in text_lines :
     line_pos += line_spacing
-    if True : # bidi :
+    buf.reset()
+    bidi_types = fb.get_bidi_types(text_line)
+    base_dir, embedding_levels = \
+        fb.get_par_embedding_levels(bidi_types, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])[1:]
+    vis_line, map = fb.reorder_line \
+      (
+        flags = FB.FLAGS_DEFAULT,
+        bidi_types = bidi_types,
+        line_offset = 0,
+        base_dir = base_dir,
+        embedding_levels = embedding_levels,
+        logical_str = text_line,
+        map = fb.Reordering.identity(text_line)
+      )[1:]
+    vis_bidi_types = map.apply(bidi_types)
+    vis_embedding_levels = map.apply(embedding_levels)
+    base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
+    glyphs = []
+    glyph_pos = line_pos
+    for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
+        # sys.stderr.write("substr[%d:%d] dir %s\n" % (pos1, pos2, ("LTR", "RTL")[FB.LEVEL_IS_RTL(level)]))
         buf.reset()
-        bidi_types = fb.get_bidi_types(text_line)
-        base_dir, embedding_levels = \
-            fb.get_par_embedding_levels(bidi_types, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])[1:]
-        vis_line, map = fb.reorder_line \
-          (
-            flags = FB.FLAGS_DEFAULT,
-            bidi_types = bidi_types,
-            line_offset = 0,
-            base_dir = base_dir,
-            embedding_levels = embedding_levels,
-            logical_str = text_line,
-            map = fb.Reordering.identity(text_line)
-          )[1:]
-        vis_bidi_types = map.apply(bidi_types)
-        vis_embedding_levels = map.apply(embedding_levels)
-        base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
-        glyphs = []
-        glyph_pos = line_pos
-        for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
-            # sys.stderr.write("substr[%d:%d] dir %s\n" % (pos1, pos2, ("LTR", "RTL")[FB.LEVEL_IS_RTL(level)]))
-            buf.reset()
-            buf.add_str(substr)
-            if FB.LEVEL_IS_RTL(level) :
-                # HarfBuzz always wants to start with logical order, not display order,
-                # so undo FriBidi reordering
-                buf.reverse()
-            #end if
-            buf.guess_segment_properties()
-            buf.direction = (hb.HB.DIRECTION_LTR, hb.HB.DIRECTION_RTL)[FB.LEVEL_IS_RTL(level)]
-            if not bidi :
-                buf.script = hb.HB.SCRIPT_COMMON # disable shaping
-            #end if
-            hb.shape(hb_font, buf)
-            new_glyphs, end_glyph_pos = buf.get_glyphs(glyph_pos)
-            glyph_pos = end_glyph_pos
-            glyphs.extend(new_glyphs)
-        #end for
-    else :
-        ctx = \
-            (qah.Context.create_for_dummy()
-                .set_font_face(qah_face)
-                .set_font_size(text_size)
-            )
-        glyphs = ctx.scaled_font.text_to_glyphs \
-          (
-            pos = line_pos,
-            text = text_line
-          )[0]
-        glyph_pos = ctx.glyph_extents(glyphs).advance
-    #end if
+        buf.add_str(substr)
+        if FB.LEVEL_IS_RTL(level) :
+            # HarfBuzz always wants to start with logical order, not display order,
+            # so undo FriBidi reordering
+            buf.reverse()
+        #end if
+        buf.guess_segment_properties()
+        buf.direction = (hb.HB.DIRECTION_LTR, hb.HB.DIRECTION_RTL)[FB.LEVEL_IS_RTL(level)]
+          # FriBidi pays attention to directional overrides, but HarfBuzz does not,
+          # so make sure latter stays consistent with former
+        if not bidi :
+            buf.script = hb.HB.SCRIPT_COMMON # disable shaping
+        #end if
+        hb.shape(hb_font, buf)
+        new_glyphs, end_glyph_pos = buf.get_glyphs(glyph_pos)
+        glyph_pos = end_glyph_pos
+        glyphs.extend(new_glyphs)
+    #end for
     max_line_width = max(max_line_width, glyph_pos.x)
     glyph_lines.append(glyphs)
 #end for
+qah_face = qah.FontFace.create_for_ft_face(ft_face)
 margin = Vector(20, 20)
 figure_dimensions = round(Vector(max_line_width, line_pos.y) + 2 * margin)
 pix = qah.ImageSurface.create \
