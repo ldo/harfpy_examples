@@ -113,7 +113,7 @@ for text_line, bidi in text_lines :
         glyphs = []
         glyph_pos = line_pos
         for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
-            sys.stderr.write("substr[%d:%d] dir %s\n" % (pos1, pos2, ("LTR", "RTL")[FB.LEVEL_IS_RTL(level)]))
+            # sys.stderr.write("substr[%d:%d] dir %s\n" % (pos1, pos2, ("LTR", "RTL")[FB.LEVEL_IS_RTL(level)]))
             buf.reset()
             buf.add_str(substr)
             if FB.LEVEL_IS_RTL(level) :
