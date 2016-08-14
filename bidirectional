@@ -27,6 +27,8 @@ import fribidi as fb
 from fribidi import \
     FRIBIDI as FB
 import harfbuzz as hb
+from harfbuzz import \
+    HARFBUZZ as HB
 
 U_LTRO = "\u202d" # left-to-right override
 U_RTLO = "\u202e" # right-to-left override
@@ -121,11 +123,11 @@ for text_line, bidi in text_lines :
             buf.reverse()
         #end if
         buf.guess_segment_properties()
-        buf.direction = (hb.HB.DIRECTION_LTR, hb.HB.DIRECTION_RTL)[FB.LEVEL_IS_RTL(level)]
+        buf.direction = (HB.DIRECTION_LTR, HB.DIRECTION_RTL)[FB.LEVEL_IS_RTL(level)]
           # FriBidi pays attention to directional overrides, but HarfBuzz does not,
           # so make sure latter stays consistent with former
         if not bidi :
-            buf.script = hb.HB.SCRIPT_COMMON # disable shaping
+            buf.script = HB.SCRIPT_COMMON # disable shaping
         #end if
         hb.shape(hb_font, buf)
         new_glyphs, end_glyph_pos = buf.get_glyphs(glyph_pos)
