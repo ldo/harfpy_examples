@@ -58,8 +58,8 @@ for author, book_title, bidi in \
     (
         (author_arabic, book_title_arabic, True),
         (author_roman, book_title_roman, False),
-        #(author_roman, book_title_english, True),
-        #(author_arabic, book_title_arabic, False),
+        (author_roman, book_title_english, True),
+        (author_arabic, book_title_arabic, False),
     ) \
 :
     if bidi :
