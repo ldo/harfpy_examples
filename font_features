@@ -23,6 +23,7 @@
 import sys
 import os
 import math
+import warnings
 # import freetype2 as ft # use Qahirah instance
 import qahirah as qah
 from qahirah import \
@@ -32,6 +33,19 @@ from qahirah import \
     Vector
 ft = qah.get_ft_lib()
 import harfbuzz as hb
+
+#+
+# Useful stuff
+#-
+
+def find_face(family_name) :
+    font = ft.find_face(family_name)
+    if font.family_name != family_name :
+        warnings.warn("font “%s” not found, substituting “%s” instead" % (family_name, font.family_name))
+    #end if
+    return \
+        font
+#end find_face
 
 def each_feature_combination(feature_list) :
     "returns every combination of on/off settings for the features in the" \
@@ -55,6 +69,10 @@ def each_feature_combination(feature_list) :
         yield ()
     #end if
 #end each_feature_combination
+
+#+
+# Mainline
+#-
 
 features_try = \
     (
@@ -84,7 +102,7 @@ line_pos = Vector(0, 0)
 max_label_width = 0
 max_line_width = 0
 for feature_try in features_try :
-    ft_face = ft.find_face(feature_try["font"])
+    ft_face = find_face(feature_try["font"])
     ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
     hb_font = hb.Font.ft_create(ft_face)
     features = feature_try["features"]
