@@ -15,6 +15,7 @@
 import sys
 import os
 import math
+import warnings
 # import freetype2 as ft # use Qahirah instance
 import qahirah as qah
 from qahirah import \
@@ -30,9 +31,26 @@ import harfbuzz as hb
 from harfbuzz import \
     HARFBUZZ as HB
 
+#+
+# Useful stuff
+#-
+
+def find_face(family_name) :
+    font = ft.find_face(family_name)
+    if font.family_name != family_name :
+        warnings.warn("font “%s” not found, substituting “%s” instead" % (family_name, font.family_name))
+    #end if
+    return \
+        font
+#end find_face
+
 U_LTRO = "\u202d" # left-to-right override
 U_RTLO = "\u202e" # right-to-left override
 U_PDF = "\u202c" # pop directional formatting
+
+#+
+# Mainline
+#-
 
 book_title_arabic = \
     (
@@ -85,7 +103,7 @@ base_rtl = False
 
 text_size = 36
 buf = hb.Buffer.create()
-ft_face = ft.find_face("Amiri")
+ft_face = find_face("Amiri")
 ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
 hb_font = hb.Font.ft_create(ft_face)
 glyph_lines = []
