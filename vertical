@@ -34,7 +34,7 @@ hb_font = hb.Font.ft_create(ft_face)
 
 glyph_lines = []
 col_spacing = Vector(ft_face.size["metrics"]["height"], 0)
-col_pos = Vector(0, 0) + col_spacing * Vector(- 1, 1)
+col_pos = Vector(0, 0) + col_spacing * Vector(-0.5, 1)
 max_col_height = 0
 for text_line in traditional, simplified :
     col_pos += col_spacing
@@ -51,7 +51,7 @@ for text_line in traditional, simplified :
 #end for
 qah_face = qah.FontFace.create_for_ft_face(ft_face)
 margin = Vector(20, 20)
-figure_dimensions = round(Vector(col_pos.x + col_spacing.x * 0.8, max_col_height) + 2 * margin)
+figure_dimensions = round(Vector(col_pos.x + col_spacing.x * 0.5, max_col_height) + 2 * margin)
 pix = qah.ImageSurface.create \
   (
     format = CAIRO.FORMAT_RGB24,
