@@ -1,0 +1,228 @@
+#!/usr/bin/python3
+#+
+# HarfPy example: Comparison of different Arabic fonts.
+#
+# Copyright 2016 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
+# script is licensed CC0
+# <https://creativecommons.org/publicdomain/zero/1.0/>; do with it
+# what you will.
+#-
+
+import sys
+import os
+import warnings
+# import freetype2 as ft # use Qahirah instance
+import qahirah as qah
+from qahirah import \
+    CAIRO, \
+    Colour, \
+    Vector
+ft = qah.get_ft_lib()
+import fribidi as fb
+from fribidi import \
+    FRIBIDI as FB
+import harfbuzz as hb
+
+#+
+# Useful stuff
+#-
+
+def find_face(family_name) :
+    font = ft.find_face(family_name)
+    if font.family_name != family_name :
+        warnings.warn("font “%s” not found, substituting “%s” instead" % (family_name, font.family_name))
+    #end if
+    return \
+        font
+#end find_face
+
+#+
+# Mainline
+#-
+
+text_arabic = \
+    (
+        "\u0623\u0628\u0648" # “Abu”
+        " \u0639\u0644\u064a\u060c" # “Ali”
+        " \u0627\u0644\u062d\u0633\u0646" # “al-Hasan”
+        " \u0628\u0646" # “ibn”
+        " \u0627\u0644\u062d\u0633\u0646" # “al-Hasan”
+        " \u0628\u0646" # “ibn”
+        " \u0627\u0644\u0647\u064a\u062b\u0645" # “al-Haytham”
+    ) # aka “Alhazen”
+base_rtl = False
+
+text_size = 36
+label_font = \
+    (qah.Context.create_for_dummy()
+        .select_font_face
+          (
+            family = "sans serif",
+            slant = CAIRO.FONT_SLANT_NORMAL,
+            weight = CAIRO.FONT_WEIGHT_NORMAL
+          )
+        .set_font_size(text_size)
+    ).scaled_font
+line_spacing = label_font.font_extents.height * 1.2
+buf = hb.Buffer.create()
+glyph_lines = []
+for font_name in \
+    (
+        "DejaVu Sans", # package: fonts-dejavu-core
+          # note DejaVu Serif has no Arabic
+        "Amiri", # package: fonts-hosny-amiri
+        "Scheherazade", # package: fonts-sil-scheherazade
+        "Noto Kufi Arabic", # package: fonts-noto-hinted
+        "Noto Naskh Arabic", # package: fonts-noto-hinted
+        # "Noto Naskh Arabic UI", # looks exactly the same as Noto Naskh Arabic
+    ) \
+:
+    # render everything to glyphs, actual layout will be arranged later
+    ft_face = find_face(font_name)
+    ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
+    hb_font = hb.Font.ft_create(ft_face)
+    qah_font = \
+        (qah.Context.create_for_dummy()
+            .set_font_face(qah.FontFace.create_for_ft_face(ft_face))
+            .set_font_size(text_size)
+        ).scaled_font
+    glyph_line = \
+        {
+            "label" : label_font.text_to_glyphs(pos = (0, 0), text = "%s:" % font_name)[0],
+            "font" : qah_font,
+            "raw_text" : qah_font.text_to_glyphs(pos = (0, 0), text = text_arabic)[0], # not shaped
+        }
+    bidi_types = fb.get_bidi_types(text_arabic)
+    base_dir, embedding_levels = \
+        fb.get_par_embedding_levels(bidi_types, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])[1:]
+    vis_line, map = fb.reorder_line \
+      (
+        flags = FB.FLAGS_DEFAULT,
+        bidi_types = bidi_types,
+        line_offset = 0,
+        base_dir = base_dir,
+        embedding_levels = embedding_levels,
+        logical_str = text_arabic,
+        map = fb.Reordering.identity(text_arabic)
+      )[1:]
+    vis_bidi_types = map.apply(bidi_types)
+    vis_embedding_levels = map.apply(embedding_levels)
+    base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
+    glyphs = []
+    glyph_pos = Vector(0, 0)
+    for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
+        # sys.stderr.write("substr[%d:%d] dir %s\n" % (pos1, pos2, ("LTR", "RTL")[FB.LEVEL_IS_RTL(level)]))
+        buf.reset()
+        buf.add_str(substr)
+        if FB.LEVEL_IS_RTL(level) :
+            # HarfBuzz always wants to start with logical order, not display order,
+            # so undo FriBidi reordering
+            buf.reverse()
+        #end if
+        buf.guess_segment_properties()
+        hb.shape(hb_font, buf)
+        new_glyphs, end_glyph_pos = buf.get_glyphs(glyph_pos)
+        glyph_pos = end_glyph_pos
+        glyphs.extend(new_glyphs)
+    #end for
+    glyph_line["shaped_text"] = glyphs
+    glyph_lines.append(glyph_line)
+#end for
+
+margin = Vector(1, 1) * text_size
+# arrange everything nicely in columns: right-aligned label, then
+# left-aligned raw text, then right-aligned shaped text
+max_label_width = max \
+  (
+    label_font.glyph_extents(glyph_line["label"]).advance.x for glyph_line in glyph_lines
+  )
+for glyph_line in glyph_lines :
+    glyph_line["label"] = list \
+      (
+        qah.offset_glyphs
+          (
+            glyphs = glyph_line["label"],
+            offset =
+                Vector
+                  (
+                        max_label_width
+                    -
+                        label_font.glyph_extents(glyph_line["label"]).advance.x,
+                    0
+                  )
+          )
+      )
+#end for
+max_raw_text_width = max \
+  (
+    glyph_line["font"].glyph_extents(glyph_line["raw_text"]).advance.x
+    for glyph_line in glyph_lines
+  )
+max_shaped_text_width = max \
+  (
+    glyph_line["font"].glyph_extents(glyph_line["shaped_text"]).advance.x
+    for glyph_line in glyph_lines
+  )
+for glyph_line in glyph_lines :
+    glyph_line["raw_text"] = list \
+      (
+        qah.offset_glyphs(glyph_line["raw_text"], Vector(max_label_width + margin.x, 0))
+      )
+    glyph_line["shaped_text"] = list \
+      (
+        qah.offset_glyphs
+          (
+            glyphs = glyph_line["shaped_text"],
+            offset =
+                Vector
+                  (
+                        max_label_width
+                    +
+                        max_raw_text_width
+                    +
+                        2 * margin.x
+                    +
+                        max_shaped_text_width
+                    -
+                        glyph_line["font"].glyph_extents(glyph_line["shaped_text"]).advance.x,
+                    0
+                  )
+          )
+      )
+#end for
+figure_dimensions = round \
+  (
+    Vector
+      (
+        max_label_width + max_raw_text_width + max_shaped_text_width + 2 * margin.x,
+        len(glyph_lines) * line_spacing
+      )
+    +
+        2 * margin
+  )
+pix = qah.ImageSurface.create \
+  (
+    format = CAIRO.FORMAT_RGB24,
+    dimensions = figure_dimensions
+  )
+ctx = \
+    (qah.Context.create(pix)
+        .translate(margin + Vector(0, line_spacing / 2))
+        .set_source_colour(Colour.grey(1))
+        .paint()
+        .set_source_colour(Colour.grey(0))
+    )
+for linenr, glyph_line in enumerate(glyph_lines) :
+    (ctx
+        .save()
+        .translate((0, linenr * line_spacing))
+        .set_scaled_font(label_font)
+        .show_glyphs(glyph_line["label"])
+        .set_scaled_font(glyph_line["font"])
+        .show_glyphs(glyph_line["raw_text"])
+        .show_glyphs(glyph_line["shaped_text"])
+        .restore()
+    )
+#end for
+pix.flush().write_to_png("%s.png" % os.path.basename(sys.argv[0]))
+hb_font = None # prevents crash at end?
