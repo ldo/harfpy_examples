@@ -90,7 +90,7 @@ for font_name in \
         {
             "label" : label_font.text_to_glyphs(pos = (0, 0), text = "%s:" % font_name)[0],
             "font" : qah_font,
-            "raw_text" : qah_font.text_to_glyphs(pos = (0, 0), text = text_arabic)[0], # not shaped
+            "unshaped_text" : qah_font.text_to_glyphs(pos = (0, 0), text = text_arabic)[0],
         }
     bidi_types = fb.get_bidi_types(text_arabic)
     base_dir, embedding_levels = \
@@ -131,7 +131,7 @@ for font_name in \
 
 margin = Vector(1, 1) * text_size
 # arrange everything nicely in columns: right-aligned label, then
-# left-aligned raw text, then right-aligned shaped text
+# left-aligned unshaped text, then right-aligned shaped text
 max_label_width = max \
   (
     label_font.glyph_extents(glyph_line["label"]).advance.x for glyph_line in glyph_lines
@@ -153,9 +153,9 @@ for glyph_line in glyph_lines :
           )
       )
 #end for
-max_raw_text_width = max \
+max_unshaped_text_width = max \
   (
-    glyph_line["font"].glyph_extents(glyph_line["raw_text"]).advance.x
+    glyph_line["font"].glyph_extents(glyph_line["unshaped_text"]).advance.x
     for glyph_line in glyph_lines
   )
 max_shaped_text_width = max \
@@ -164,9 +164,9 @@ max_shaped_text_width = max \
     for glyph_line in glyph_lines
   )
 for glyph_line in glyph_lines :
-    glyph_line["raw_text"] = list \
+    glyph_line["unshaped_text"] = list \
       (
-        qah.offset_glyphs(glyph_line["raw_text"], Vector(max_label_width + margin.x, 0))
+        qah.offset_glyphs(glyph_line["unshaped_text"], Vector(max_label_width + margin.x, 0))
       )
     glyph_line["shaped_text"] = list \
       (
@@ -178,7 +178,7 @@ for glyph_line in glyph_lines :
                   (
                         max_label_width
                     +
-                        max_raw_text_width
+                        max_unshaped_text_width
                     +
                         2 * margin.x
                     +
@@ -194,7 +194,7 @@ figure_dimensions = round \
   (
     Vector
       (
-        max_label_width + max_raw_text_width + max_shaped_text_width + 2 * margin.x,
+        max_label_width + max_unshaped_text_width + max_shaped_text_width + 2 * margin.x,
         len(glyph_lines) * line_spacing
       )
     +
@@ -219,7 +219,7 @@ for linenr, glyph_line in enumerate(glyph_lines) :
         .set_scaled_font(label_font)
         .show_glyphs(glyph_line["label"])
         .set_scaled_font(glyph_line["font"])
-        .show_glyphs(glyph_line["raw_text"])
+        .show_glyphs(glyph_line["unshaped_text"])
         .show_glyphs(glyph_line["shaped_text"])
         .restore()
     )
