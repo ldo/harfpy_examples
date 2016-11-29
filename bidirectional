@@ -126,7 +126,7 @@ for text_line, bidi in text_lines :
         logical_str = text_line,
         map = fb.Reordering.identity(text_line)
       )[1:]
-    vis_bidi_types = map.apply(bidi_types)
+    #vis_bidi_types = map.apply(bidi_types) # not needed
     vis_embedding_levels = map.apply(embedding_levels)
     base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
     glyphs = []
