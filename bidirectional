@@ -128,7 +128,7 @@ for text_line, bidi in text_lines :
       )[1:]
     #vis_bidi_types = map.apply(bidi_types) # not needed
     vis_embedding_levels = map.apply(embedding_levels)
-    base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
+    #base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
     glyphs = []
     glyph_pos = line_pos
     for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
