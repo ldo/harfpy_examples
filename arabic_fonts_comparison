@@ -105,7 +105,7 @@ for font_name in \
         logical_str = text_arabic,
         map = fb.Reordering.identity(text_arabic)
       )[1:]
-    vis_bidi_types = map.apply(bidi_types)
+    #vis_bidi_types = map.apply(bidi_types) # not needed
     vis_embedding_levels = map.apply(embedding_levels)
     #base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
     glyphs = []
