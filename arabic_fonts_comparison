@@ -225,4 +225,3 @@ for linenr, glyph_line in enumerate(glyph_lines) :
     )
 #end for
 pix.flush().write_to_png("%s.png" % os.path.basename(sys.argv[0]))
-hb_font = None # prevents crash at end?

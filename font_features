@@ -166,4 +166,3 @@ for line in lines :
     ctx.show_glyphs(tuple(qah.offset_glyphs(line["text"], Vector(max_label_width + label_gap, 0))))
 #end for
 pix.flush().write_to_png("%s.png" % os.path.basename(sys.argv[0]))
-hb_font = None # prevents crash at end?
