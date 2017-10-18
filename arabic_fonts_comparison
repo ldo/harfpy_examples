@@ -92,25 +92,10 @@ for font_name in \
             "font" : qah_font,
             "unshaped_text" : qah_font.text_to_glyphs(pos = (0, 0), text = text_arabic)[0],
         }
-    bidi_types = fb.get_bidi_types(text_arabic)
-    base_dir, embedding_levels = \
-        fb.get_par_embedding_levels(bidi_types, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])[1:]
-    vis_line, map = fb.reorder_line \
-      (
-        flags = FB.FLAGS_DEFAULT,
-        bidi_types = bidi_types,
-        line_offset = 0,
-        base_dir = base_dir,
-        embedding_levels = embedding_levels,
-        logical_str = text_arabic,
-        map = fb.Reordering.identity(text_arabic)
-      )[1:]
-    #vis_bidi_types = map.apply(bidi_types) # not needed
-    vis_embedding_levels = map.apply(embedding_levels)
-    #base_rtl = FB.IS_RTL(base_dir) # I suppose this is redundant...
+    reordered = fb.ReorderLine(text_arabic, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])
     glyphs = []
     glyph_pos = Vector(0, 0)
-    for substr, pos1, pos2, level in fb.each_embedding_run(vis_line, vis_embedding_levels) :
+    for substr, pos1, pos2, level in reordered.each_embedding_run() :
         # sys.stderr.write("substr[%d:%d] dir %s\n" % (pos1, pos2, ("LTR", "RTL")[FB.LEVEL_IS_RTL(level)]))
         buf.reset()
         buf.add_str(substr)
