@@ -3,9 +3,10 @@
 # HarfPy example: recreating snippets of Indic text from
 # <http://rishida.net/scripts/indic-overview/>. Fonts needed:
 #
-#      Name                     Debian package name
-#      ----                     -------------------
+#      Name                    Debian package name
+#      ----                    -------------------
 #    Lohit Devanagari           fonts-lohit-deva
+#    Lohit Kannada              fonts-lohit-knda
 #
 # Copyright 2017 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
 # script is licensed CC0
@@ -44,46 +45,63 @@ def find_face(family_name) :
 # Mainline
 #-
 
-text_lines = \
+text_samples = \
     (
-        "Hindi "
-        "\u0939" # DEVANAGARI LETTER HA
-        "\u093F" # DEVANAGARI VOWEL SIGN I
-        "\u0902" # DEVANAGARI SIGN ANUSVARA
-        "\u0926" # DEVANAGARI LETTER DA
-        "\u0940", # DEVANAGARI VOWEL SIGN II
+        (
+            "Lohit Devanagari",
+            (
+                "Hindi "
+                "\u0939" # DEVANAGARI LETTER HA
+                "\u093F" # DEVANAGARI VOWEL SIGN I
+                "\u0902" # DEVANAGARI SIGN ANUSVARA
+                "\u0926" # DEVANAGARI LETTER DA
+                "\u0940", # DEVANAGARI VOWEL SIGN II
 
-        "Yogi "
-        "\u092F" # DEVANAGARI LETTER YA
-        "\u094B" # DEVANAGARI VOWEL SIGN O
-        "\u0917" # DEVANAGARI LETTER GA
-        "\u094D" # DEVANAGARI SIGN VIRAMA
-        "\u092F", # DEVANAGARI LETTER YA
+                "Yogi "
+                "\u092F" # DEVANAGARI LETTER YA
+                "\u094B" # DEVANAGARI VOWEL SIGN O
+                "\u0917" # DEVANAGARI LETTER GA
+                "\u094D" # DEVANAGARI SIGN VIRAMA
+                "\u092F", # DEVANAGARI LETTER YA
+            ),
+        ),
+        (
+            "Lohit Kannada", # FIXME: doesn’t have Roman characters
+            (
+                "Simha "
+                "\u0CB8" # KANNADA LETTER SA
+                "\u0C82" # KANNADA SIGN ANUSVARA
+                "\u0CB9", # KANNADA LETTER HA
+            ),
+        ),
     )
 
 text_size = 36
 buf = hb.Buffer.create()
-ft_face = find_face("Lohit Devanagari")
-ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
-hb_font = hb.Font.ft_create(ft_face)
-glyph_lines = []
-line_spacing = Vector(0, ft_face.size["metrics"]["height"])
-line_pos = Vector(0, 0) + line_spacing * Vector(1, 0.4 - 1)
+line_pos = Vector(0, 0)
 max_line_width = 0
-for text_line in text_lines :
-    line_pos += line_spacing
-    buf.reset()
-    buf.add_str(text_line)
-    buf.guess_segment_properties()
-    hb.shape(hb_font, buf)
-    glyphs, end_glyph_pos = buf.get_glyphs(line_pos)
-    glyph_lines.append(glyphs)
-    max_line_width = max(max_line_width, end_glyph_pos.x)
+glyph_renders = []
+for font_spec, text_lines in text_samples :
+    ft_face = find_face(font_spec)
+    ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
+    hb_font = hb.Font.ft_create(ft_face)
+    line_spacing = Vector(0, ft_face.size["metrics"]["height"])
+    glyph_lines = []
+    for text_line in text_lines :
+        line_pos += line_spacing
+        buf.reset()
+        buf.add_str(text_line)
+        buf.guess_segment_properties()
+        hb.shape(hb_font, buf)
+        glyphs, end_glyph_pos = buf.get_glyphs(line_pos)
+        glyph_lines.append(glyphs)
+        max_line_width = max(max_line_width, end_glyph_pos.x)
+    #end for
+    glyph_renders.append({"ft_face" : ft_face, "glyph_lines" : glyph_lines})
 #end for
 
-qah_face = qah.FontFace.create_for_ft_face(ft_face)
-margin = Vector(20, 20)
-figure_dimensions = round(Vector(max_line_width, line_pos.y) + 2 * margin)
+margin = Vector(10, 10)
+figure_dimensions = round(Vector(max_line_width, line_pos.y) + margin * Vector(3, 4))
 pix = qah.ImageSurface.create \
   (
     format = CAIRO.FORMAT_RGB24,
@@ -95,10 +113,13 @@ ctx = \
         .set_source_colour(Colour.grey(1))
         .paint()
         .set_source_colour(Colour.grey(0))
-        .set_font_face(qah_face)
-        .set_font_size(text_size)
     )
-for glyphs in glyph_lines :
-    ctx.show_glyphs(glyphs)
+for glyph_render in glyph_renders :
+    qah_face = qah.FontFace.create_for_ft_face(glyph_render["ft_face"])
+    ctx.set_font_face(qah_face)
+    ctx.set_font_size(text_size)
+    for glyphs in glyph_render["glyph_lines"] :
+        ctx.show_glyphs(glyphs)
+    #end for
 #end for
 pix.flush().write_to_png("%s.png" % os.path.basename(sys.argv[0]))
