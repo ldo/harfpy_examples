@@ -45,22 +45,26 @@ def find_face(family_name) :
 #end find_face
 
 #+
-# Mainline
+# Samples
+#
+# Most of these fonts, other than Lohit Devanagari, don’t have
+# Roman characters, and also the presence of Roman characters
+# seems to confuse their shaping algorithms.
 #-
 
 text_samples = \
-    (
+    ( # sequence of (fontspec, lines) tuples
         (
             "Lohit Devanagari",
             (
-                "Hindi "
+                #"Hindi "
                 "\u0939" # DEVANAGARI LETTER HA
                 "\u093F" # DEVANAGARI VOWEL SIGN I
                 "\u0902" # DEVANAGARI SIGN ANUSVARA
                 "\u0926" # DEVANAGARI LETTER DA
                 "\u0940", # DEVANAGARI VOWEL SIGN II
 
-                "Yogi "
+                #"Yogi "
                 "\u092F" # DEVANAGARI LETTER YA
                 "\u094B" # DEVANAGARI VOWEL SIGN O
                 "\u0917" # DEVANAGARI LETTER GA
@@ -69,24 +73,30 @@ text_samples = \
             ),
         ),
         (
-            "Lohit Kannada", # FIXME: doesn’t have Roman characters
+            "Lohit Kannada",
             (
-                "Simha "
+                #"Simha "
                 "\u0CB8" # KANNADA LETTER SA
                 "\u0C82" # KANNADA SIGN ANUSVARA
                 "\u0CB9", # KANNADA LETTER HA
 
-                "Punaha "
+                #"Punaha "
                 "\u0CAA" #  KANNADA LETTER PA
                 "\u0CC1" #  KANNADA VOWEL SIGN U
                 "\u0CA8" #  KANNADA LETTER NA
                 "\u0C83", # KANNADA SIGN VISARGA
+
+                #"Kri "
+                "\u0C95" # KANNADA LETTER KA
+                "\u0CCD" # U+0CCD KANNADA SIGN VIRAMA
+                "\u0CB0" # KANNADA LETTER RA
+                "\u0CBF", # KANNADA VOWEL SIGN I
             ),
         ),
         (
-            "Lohit Odia", # FIXME: doesn’t have Roman characters
+            "Lohit Odia",
             (
-                "Anka "
+                #"Anka "
                 "\u0B05" # ORIYA LETTER A
                 "\u0B02" # U+0B02 ORIYA SIGN ANUSVARA
                 "\u0B15", # U+0B15 ORIYA LETTER KA
@@ -95,14 +105,14 @@ text_samples = \
         (
             "Lohit Gurmukhi",
             (
-                "Munda "
+                #"Munda "
                 "\u0A2E" # GURMUKHI LETTER MA
                 "\u0A41" # GURMUKHI VOWEL SIGN U
                 "\u0A70" # GURMUKHI TIPPI
                 "\u0A21" # GURMUKHI LETTER DDA
                 "\u0A3E", # GURMUKHI VOWEL SIGN AA
 
-                "Shat "
+                #"Shat "
                 "\u0A38" # GURMUKHI LETTER SA
                 "\u0A3C" #  GURMUKHI SIGN NUKTA
                 "\u0A3E" #  GURMUKHI VOWEL SIGN AA
@@ -113,14 +123,14 @@ text_samples = \
         (
             "Lohit Tamil",
             (
-                "Fisu "
+                #"Fisu "
                 "\u0B83" # TAMIL SIGN VISARGA
                 "\u0BAA" # TAMIL LETTER PA
                 "\u0BC0" # TAMIL VOWEL SIGN II
                 "\u0B9A" # TAMIL LETTER CA
                 "\u0BC1", # TAMIL VOWEL SIGN U
 
-                "Ziroks "
+                #"Ziroks "
                 "\u0B83" # TAMIL SIGN VISARGA
                 "\u0B9C" # TAMIL LETTER JA
                 "\u0BBF" # TAMIL VOWEL SIGN I
@@ -134,14 +144,33 @@ text_samples = \
         ),
     )
 
-text_size = 36
+#+
+# Mainline
+#-
+
+label_text_size = 36
+sample_text_size = 36
+roman_face = find_face("DejaVu Sans")
+roman_face.set_char_size(size = label_text_size, resolution = qah.base_dpi)
+hb_roman = hb.Font.ft_create(roman_face)
 buf = hb.Buffer.create()
 line_pos = Vector(0, 0)
+sample_indent = 40
 max_line_width = 0
 glyph_renders = []
 for font_spec, text_lines in text_samples :
+    line_spacing = Vector(0, roman_face.size["metrics"]["height"])
+    line_pos += line_spacing * Vector(1, 1.5)
+    buf.reset()
+    buf.add_str(font_spec)
+    buf.guess_segment_properties()
+    hb.shape(hb_roman, buf)
+    glyphs, end_glyph_pos = buf.get_glyphs(line_pos)
+    max_line_width = max(max_line_width, end_glyph_pos.x)
+    glyph_renders.append({"ft_face" : roman_face, "size" : label_text_size, "glyph_lines" : [glyphs]})
+
     ft_face = find_face(font_spec)
-    ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
+    ft_face.set_char_size(size = sample_text_size, resolution = qah.base_dpi)
     hb_font = hb.Font.ft_create(ft_face)
     line_spacing = Vector(0, ft_face.size["metrics"]["height"])
     glyph_lines = []
@@ -151,11 +180,11 @@ for font_spec, text_lines in text_samples :
         buf.add_str(text_line)
         buf.guess_segment_properties()
         hb.shape(hb_font, buf)
-        glyphs, end_glyph_pos = buf.get_glyphs(line_pos)
+        glyphs, end_glyph_pos = buf.get_glyphs(line_pos + Vector(sample_indent, 0))
         glyph_lines.append(glyphs)
         max_line_width = max(max_line_width, end_glyph_pos.x)
     #end for
-    glyph_renders.append({"ft_face" : ft_face, "glyph_lines" : glyph_lines})
+    glyph_renders.append({"ft_face" : ft_face, "size" : sample_text_size, "glyph_lines" : glyph_lines})
 #end for
 
 margin = Vector(10, 10)
@@ -175,7 +204,7 @@ ctx = \
 for glyph_render in glyph_renders :
     qah_face = qah.FontFace.create_for_ft_face(glyph_render["ft_face"])
     ctx.set_font_face(qah_face)
-    ctx.set_font_size(text_size)
+    ctx.set_font_size(glyph_render["size"])
     for glyphs in glyph_render["glyph_lines"] :
         ctx.show_glyphs(glyphs)
     #end for
