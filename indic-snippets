@@ -9,6 +9,7 @@
 #    Lohit Gurmukhi             fonts-lohit-guru
 #    Lohit Kannada              fonts-lohit-knda
 #    Lohit Odia                 fonts-lohit-orya
+#    Lohit Tamil                fonts-lohit-taml
 #
 # Copyright 2017 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
 # script is licensed CC0
@@ -107,6 +108,28 @@ text_samples = \
                 "\u0A3E" #  GURMUKHI VOWEL SIGN AA
                 "\u0A02" #  GURMUKHI SIGN BINDI
                 "\u0A24", #  GURMUKHI LETTER TA
+            ),
+        ),
+        (
+            "Lohit Tamil",
+            (
+                "Fisu "
+                "\u0B83" # TAMIL SIGN VISARGA
+                "\u0BAA" # TAMIL LETTER PA
+                "\u0BC0" # TAMIL VOWEL SIGN II
+                "\u0B9A" # TAMIL LETTER CA
+                "\u0BC1", # TAMIL VOWEL SIGN U
+
+                "Ziroks "
+                "\u0B83" # TAMIL SIGN VISARGA
+                "\u0B9C" # TAMIL LETTER JA
+                "\u0BBF" # TAMIL VOWEL SIGN I
+                "\u0BB0" # TAMIL LETTER RA
+                "\u0BBE" # TAMIL VOWEL SIGN AA
+                "\u0B95" # TAMIL LETTER KA
+                "\u0BCD" # TAMIL SIGN VIRAMA
+                "\u0BB8" # TAMIL LETTER SA
+                "\u0BCD", # TAMIL SIGN VIRAMA
             ),
         ),
     )
