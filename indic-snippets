@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 #+
-# HarfPy example: recreating snippets of Indic text from
+# HarfPy example: recreating selected snippets of Indic text from
 # <http://rishida.net/scripts/indic-overview/>. Fonts needed:
 #
 #      Name                    Debian package name
 #      ----                    -------------------
 #    Lohit Devanagari           fonts-lohit-deva
 #    Lohit Kannada              fonts-lohit-knda
+#    Lohit Odia                 fonts-lohit-orya
 #
 # Copyright 2017 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
 # script is licensed CC0
@@ -72,6 +73,15 @@ text_samples = \
                 "\u0CB8" # KANNADA LETTER SA
                 "\u0C82" # KANNADA SIGN ANUSVARA
                 "\u0CB9", # KANNADA LETTER HA
+            ),
+        ),
+        (
+            "Lohit Odia", # FIXME: doesn’t have Roman characters
+            (
+                "Anka "
+                "\u0B05" # ORIYA LETTER A
+                "\u0B02" # U+0B02 ORIYA SIGN ANUSVARA
+                "\u0B15", # U+0B15 ORIYA LETTER KA
             ),
         ),
     )
