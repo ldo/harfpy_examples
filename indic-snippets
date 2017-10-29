@@ -73,6 +73,24 @@ text_samples = \
             ),
         ),
         (
+            "Lohit Gurmukhi",
+            (
+                #"Munda "
+                "\u0A2E" # GURMUKHI LETTER MA
+                "\u0A41" # GURMUKHI VOWEL SIGN U
+                "\u0A70" # GURMUKHI TIPPI
+                "\u0A21" # GURMUKHI LETTER DDA
+                "\u0A3E", # GURMUKHI VOWEL SIGN AA
+
+                #"Shat "
+                "\u0A38" # GURMUKHI LETTER SA
+                "\u0A3C" #  GURMUKHI SIGN NUKTA
+                "\u0A3E" #  GURMUKHI VOWEL SIGN AA
+                "\u0A02" #  GURMUKHI SIGN BINDI
+                "\u0A24", #  GURMUKHI LETTER TA
+            ),
+        ),
+        (
             "Lohit Kannada",
             (
                 #"Simha "
@@ -100,24 +118,6 @@ text_samples = \
                 "\u0B05" # ORIYA LETTER A
                 "\u0B02" # U+0B02 ORIYA SIGN ANUSVARA
                 "\u0B15", # U+0B15 ORIYA LETTER KA
-            ),
-        ),
-        (
-            "Lohit Gurmukhi",
-            (
-                #"Munda "
-                "\u0A2E" # GURMUKHI LETTER MA
-                "\u0A41" # GURMUKHI VOWEL SIGN U
-                "\u0A70" # GURMUKHI TIPPI
-                "\u0A21" # GURMUKHI LETTER DDA
-                "\u0A3E", # GURMUKHI VOWEL SIGN AA
-
-                #"Shat "
-                "\u0A38" # GURMUKHI LETTER SA
-                "\u0A3C" #  GURMUKHI SIGN NUKTA
-                "\u0A3E" #  GURMUKHI VOWEL SIGN AA
-                "\u0A02" #  GURMUKHI SIGN BINDI
-                "\u0A24", #  GURMUKHI LETTER TA
             ),
         ),
         (
