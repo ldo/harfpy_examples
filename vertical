@@ -49,7 +49,7 @@ for text_line in traditional, simplified :
     max_col_height = max(max_col_height, end_glyph_pos.y)
     glyph_lines.append(glyphs)
 #end for
-qah_face = qah.FontFace.create_for_ft_face(ft_face)
+cairo_face = qah.FontFace.create_for_ft_face(ft_face)
 margin = Vector(20, 20)
 figure_dimensions = round(Vector(col_pos.x + col_spacing.x * 0.5, max_col_height) + 2 * margin)
 pix = qah.ImageSurface.create \
@@ -63,7 +63,7 @@ ctx = \
         .set_source_colour(Colour.x11["goldenrod"])
         .paint()
         .set_source_colour(Colour.x11["red3"])
-        .set_font_face(qah_face)
+        .set_font_face(cairo_face)
         .set_font_size(text_size)
     )
 for glyphs in glyph_lines :

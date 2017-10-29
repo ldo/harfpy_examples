@@ -81,7 +81,7 @@ for font_name in \
     ft_face = find_face(font_name)
     ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
     hb_font = hb.Font.ft_create(ft_face)
-    qah_font = \
+    cairo_font = \
         (qah.Context.create_for_dummy()
             .set_font_face(qah.FontFace.create_for_ft_face(ft_face))
             .set_font_size(text_size)
@@ -89,8 +89,8 @@ for font_name in \
     glyph_line = \
         {
             "label" : label_font.text_to_glyphs(pos = (0, 0), text = "%s:" % font_name)[0],
-            "font" : qah_font,
-            "unshaped_text" : qah_font.text_to_glyphs(pos = (0, 0), text = text_arabic)[0],
+            "font" : cairo_font,
+            "unshaped_text" : cairo_font.text_to_glyphs(pos = (0, 0), text = text_arabic)[0],
         }
     reordered = fb.ReorderLine(text_arabic, (FB.PAR_LTR, FB.PAR_RTL)[base_rtl])
     glyphs = []
