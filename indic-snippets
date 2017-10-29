@@ -150,27 +150,40 @@ text_samples = \
 
 label_text_size = 36
 sample_text_size = 36
-roman_face = find_face("DejaVu Sans")
-roman_face.set_char_size(size = label_text_size, resolution = qah.base_dpi)
-hb_roman = hb.Font.ft_create(roman_face)
+roman_ft_face = find_face("DejaVu Sans")
+roman_ft_face.set_char_size(size = label_text_size, resolution = qah.base_dpi)
+roman_cairo_face = qah.FontFace.create_for_ft_face(roman_ft_face)
+hb_roman = hb.Font.ft_create(roman_ft_face)
 buf = hb.Buffer.create()
 line_pos = Vector(0, 0)
 sample_indent = 40
-max_line_width = 0
+line_width = 500
 glyph_renders = []
+col_2 = 250
 for font_spec, text_lines in text_samples :
-    line_spacing = Vector(0, roman_face.size["metrics"]["height"])
+    line_spacing = Vector(0, roman_ft_face.size["metrics"]["height"])
     line_pos += line_spacing * Vector(1, 1.5)
     buf.reset()
     buf.add_str(font_spec)
     buf.guess_segment_properties()
     hb.shape(hb_roman, buf)
     glyphs, end_glyph_pos = buf.get_glyphs(line_pos)
-    max_line_width = max(max_line_width, end_glyph_pos.x)
-    glyph_renders.append({"ft_face" : roman_face, "size" : label_text_size, "glyph_lines" : [glyphs]})
-
+    glyph_renders.append \
+      (
+        {
+            "face" : roman_cairo_face,
+            "size" : label_text_size,
+            "glyph_lines" : [{"shaped" : glyphs, "unshaped" : []}],
+        }
+      )
     ft_face = find_face(font_spec)
     ft_face.set_char_size(size = sample_text_size, resolution = qah.base_dpi)
+    cairo_face = qah.FontFace.create_for_ft_face(ft_face)
+    cairo_font = \
+        (qah.Context.create_for_dummy()
+            .set_font_face(cairo_face)
+            .set_font_size(sample_text_size)
+        ).scaled_font
     hb_font = hb.Font.ft_create(ft_face)
     line_spacing = Vector(0, ft_face.size["metrics"]["height"])
     glyph_lines = []
@@ -180,15 +193,26 @@ for font_spec, text_lines in text_samples :
         buf.add_str(text_line)
         buf.guess_segment_properties()
         hb.shape(hb_font, buf)
-        glyphs, end_glyph_pos = buf.get_glyphs(line_pos + Vector(sample_indent, 0))
-        glyph_lines.append(glyphs)
-        max_line_width = max(max_line_width, end_glyph_pos.x)
+        shaped_glyphs, end_glyph_pos = buf.get_glyphs(line_pos + Vector(sample_indent, 0))
+        unshaped_glyphs = cairo_font.text_to_glyphs \
+          (
+            pos = line_pos + Vector(sample_indent + col_2, 0),
+            text = text_line
+          )[0]
+        glyph_lines.append({"shaped" : shaped_glyphs, "unshaped" : unshaped_glyphs})
     #end for
-    glyph_renders.append({"ft_face" : ft_face, "size" : sample_text_size, "glyph_lines" : glyph_lines})
+    glyph_renders.append \
+      (
+        {
+            "face" : cairo_face,
+            "size" : sample_text_size,
+            "glyph_lines" : glyph_lines,
+        }
+      )
 #end for
 
 margin = Vector(10, 10)
-figure_dimensions = round(Vector(max_line_width, line_pos.y) + margin * Vector(3, 4))
+figure_dimensions = round(Vector(line_width, line_pos.y) + margin * Vector(3, 4))
 pix = qah.ImageSurface.create \
   (
     format = CAIRO.FORMAT_RGB24,
@@ -202,11 +226,11 @@ ctx = \
         .set_source_colour(Colour.grey(0))
     )
 for glyph_render in glyph_renders :
-    qah_face = qah.FontFace.create_for_ft_face(glyph_render["ft_face"])
-    ctx.set_font_face(qah_face)
+    ctx.set_font_face(glyph_render["face"])
     ctx.set_font_size(glyph_render["size"])
     for glyphs in glyph_render["glyph_lines"] :
-        ctx.show_glyphs(glyphs)
+        ctx.show_glyphs(glyphs["shaped"])
+        ctx.show_glyphs(glyphs["unshaped"])
     #end for
 #end for
 pix.flush().write_to_png("%s.png" % os.path.basename(sys.argv[0]))
