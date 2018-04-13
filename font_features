@@ -60,7 +60,7 @@ def each_feature_combination(feature_list) :
             maxval = 1
         #end if
         for val in range(maxval + 1) :
-            setting = hb.Feature(tag = hb.HB.TAG(f), value = val, start = 0, end = 0xFFFFFFFF)
+            setting = hb.Feature(tag = hb.HB.TAG(f), value = val)
             for setting_rest in each_feature_combination(rest) :
                 yield (setting,) + setting_rest
             #end for
