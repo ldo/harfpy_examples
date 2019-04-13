@@ -1,0 +1,229 @@
+#!/usr/bin/python3
+#+
+# Draw large, nicely-kerned text. Invoke this script as follows:
+#
+#     banner_text [«options»] «text»...
+#
+# where each «text» argument is rendered on a separate line, with
+# automatic centring vertically and horizontally.
+#
+# Valid «options» are as follows:
+#
+#    --dpi=«dpi»
+#        the output resolution at which to render the page. Defaults to 72.
+#    --feature=«feature»
+#        specifies a font feature to enable/disable. This follows the usual
+#        HarfBuzz syntax of the four-character feature code, optionally preceded
+#        by a plus or minus sign, e.g. “kern” or “+kern” to enable kerning, “-kern”
+#        to disable it. A list of standard feature names is available at
+#        <https://www.microsoft.com/typography/otspec/featurelist.htm>, but the
+#        actual ones supported (if any) depend on the font.
+#    --font=«fontspec»
+#        a Fontconfig pattern string specifying the font to use.
+#    --out=«outfilename»
+#        the output file name. If omitted, the output is displayed
+#        on-screen instead of being saved to a file.
+#    --paper-a=«sizecode»
+#        the paper size code: this is a number to which is prefixed the
+#        letter “A”; thus “4” represents the A4 paper size.
+#    --size=«textsize»
+#        the text size to use. Defaults to 144 points.
+#    --svg
+#        render the output in vector SVG rather than PNG bitmap format.
+#
+# External program needed: ImageMagick for on-screen display.
+#
+# Copyright 2019 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
+# script is licensed CC0
+# <https://creativecommons.org/publicdomain/zero/1.0/>; do with it
+# what you will.
+#-
+
+import sys
+import os
+import math
+import subprocess
+import getopt
+import qahirah as qah
+from qahirah import \
+    CAIRO, \
+    Colour, \
+    Glyph, \
+    Vector
+ft = qah.get_ft_lib()
+import harfbuzz as hb
+
+#+
+# Useful stuff
+#-
+
+#points_per_metre = 2835 # used by PNG?
+points_per_metre = 72 / .0254
+
+def a_paper_size(num) :
+    "returns the dimensions of the A«num» paper size, rounded to whole points," \
+    " in landscape orientation."
+    a1_dims = Vector(1, math.sqrt(0.5)) * points_per_metre # dimensions of A1 paper size
+    return \
+        round(a1_dims / 2 ** ((num - 0.5) / 2))
+#end a_paper_size
+
+#+
+# Mainline
+#-
+
+opts, text = getopt.getopt \
+  (
+    sys.argv[1:],
+    "",
+    ("dpi=", "feature=", "font=", "noshaping", "out=", "paper-a=", "size=", "svg")
+  )
+dpi = qah.base_dpi
+paper_a = 4
+text_size = 144
+font_spec = "serif"
+outfilename = None
+hb_features = []
+out_svg = False
+use_hb = True
+for keyword, value in opts :
+    if keyword == "--dpi" :
+        dpi = float(value)
+        assert dpi > 0
+    elif keyword == "--feature" :
+        hb_features.append(hb.Feature.from_string(value))
+    elif keyword == "--font" :
+        font_spec = value
+    elif keyword == "--noshaping" :
+        use_hb = False
+    elif keyword == "--out" :
+        outfilename = value
+    elif keyword == "--paper-a" :
+        paper_a = int(value)
+    elif keyword == "--size" :
+        text_size = float(value)
+        assert text_size > 0
+    elif keyword == "--svg" :
+        out_svg = True
+    #end if
+#end for
+if not use_hb and len(hb_features) != 0 :
+    raise getopt.GetoptError("--feature not allowed with --noshaping")
+#end if
+if len(text) == 0 :
+    raise getopt.GetoptError("nothing to draw")
+#end if
+paper_size = a_paper_size(paper_a)
+sys.stderr.write("paper size = %s\n" % repr(paper_size)) # debug
+
+ft_face = ft.find_face(font_spec)
+sys.stderr.write("font = %s\n" % ft_face.family_name) # debug
+ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
+line_spacing = ft_face.size["metrics"]["height"]
+baseline_offset = (ft_face.size["metrics"]["ascender"] + ft_face.size["metrics"]["descender"]) / 2
+
+if outfilename == None :
+    proc_display = subprocess.Popen \
+      (
+        args = ("display", "/dev/stdin"),
+        stdin = subprocess.PIPE
+      )
+else :
+    proc_display = None
+#end if
+
+if out_svg :
+    pix = qah.SVGSurface.create \
+      (
+        filename =
+            (
+                lambda : outfilename,
+                lambda : "/dev/fd/%d" % proc_display.stdin.fileno(),
+            )[outfilename == None](),
+        dimensions_in_points = paper_size
+      )
+    dpi = qah.base_dpi
+else :
+    pix = qah.ImageSurface.create \
+      (
+        format = CAIRO.FORMAT_RGB24,
+        dimensions = round(paper_size * dpi / qah.base_dpi)
+      )
+#end if
+ctx = \
+    (qah.Context.create(pix)
+        .scale(dpi / qah.base_dpi)
+        .set_source_colour(Colour.grey(1))
+        .paint()
+        .set_source_colour(Colour.grey(0))
+        #.set_font_face(qah.FontFace.create_for_ft_face(ft_face))
+        .set_font_face(qah.FontFace.create_for_pattern(font_spec))
+          # need to give Cairo its own copy of FT.Face to avoid interfering with
+          # HarfBuzz’s glyph positioning--happens at non-default DPI settings
+        .set_font_size(text_size)
+    )
+sys.stderr.write("ft ascender = %.3g, descender = %.3g\n" % (ft_face.size["metrics"]["ascender"], ft_face.size["metrics"]["descender"])) # debug
+sys.stderr.write("qah ascender = %.3g, descender = %.3g\n" % (ctx.font_extents.ascent, ctx.font_extents.descent)) # debug
+
+if use_hb :
+    buf = hb.Buffer.create()
+    hb_font = hb.Font.ft_create(ft_face)
+    hb_face = hb.Face.ft_create(ft_face); sys.stderr.write("font has glyph classes? %s\n" % hb_face.ot_layout_has_glyph_classes) # debug
+    if len(hb_features) == 0 :
+        hb_features = tuple \
+          (
+            hb.Feature(tag = hb.HB.TAG(feature_tag), value = 1)
+            for feature_tag in (b'kern', b'liga')
+          )
+    #end if
+#end if
+
+baseline = (paper_size.y - line_spacing * (len(text) - 1)) / 2 + baseline_offset
+for line in text :
+    if use_hb :
+        buf.reset()
+        buf.add_str(line)
+        buf.guess_segment_properties()
+        hb.shape(hb_font, buf, hb_features)
+        glyphs = buf.get_glyphs()[0]
+    else :
+        glyphs = ctx.scaled_font.text_to_glyphs(Vector(0, 0), line)[0]
+    #end if
+    if out_svg :
+        ctx.new_path()
+        ctx.glyph_path \
+          (
+            tuple(qah.offset_glyphs
+              (
+                glyphs,
+                Vector((paper_size.x - ctx.glyph_extents(glyphs).advance.x) / 2, baseline)
+              ))
+          )
+        ctx.fill()
+    else :
+        ctx.show_glyphs \
+          (
+            tuple(qah.offset_glyphs
+              (
+                glyphs,
+                Vector((paper_size.x - ctx.glyph_extents(glyphs).advance.x) / 2, baseline)
+              ))
+          )
+    #end if
+    baseline += line_spacing
+#end for
+
+pix.flush()
+if out_svg :
+    ctx = pix = None # output not flushed until objects are disposed!
+else :
+    if outfilename != None :
+        pix.write_to_png(outfilename)
+    else :
+        pix.write_to_png_file(proc_display.stdin)
+    #end if
+#end if
+if proc_display != None :
+    proc_display.stdin.close()
+    proc_display.wait()
+#end if
