@@ -20,6 +20,8 @@
 #        actual ones supported (if any) depend on the font.
 #    --font=«fontspec»
 #        a Fontconfig pattern string specifying the font to use.
+#    --noshaping
+#        turn off HarfBuzz shaping. Useful for comparisons.
 #    --out=«outfilename»
 #        the output file name. If omitted, the output is displayed
 #        on-screen instead of being saved to a file.
@@ -105,11 +107,10 @@ for keyword, value in opts :
         assert text_size > 0
     elif keyword == "--svg" :
         out_svg = True
+    elif keyword == "--transparent" :
+        transparent = True
     #end if
 #end for
-if not use_hb and len(hb_features) != 0 :
-    raise getopt.GetoptError("--feature not allowed with --noshaping")
-#end if
 if len(text) == 0 :
     raise getopt.GetoptError("nothing to draw")
 #end if
