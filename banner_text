@@ -267,7 +267,6 @@ while True :
                 ctx.show_glyphs(glyphs)
             #end if
         else :
-            sys.stderr.write("bounds of glyphs %s before offset: %s\n" % (repr(glyphs), repr(ctx.glyph_extents(glyphs).bounds))) # debug
             # Note that offset_glyphs does not affect returned TextExtents
             page_bounds |= ctx.glyph_extents(glyphs).bounds + Vector(0, baseline)
         #end if
