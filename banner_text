@@ -25,11 +25,18 @@
 #    --out=«outfilename»
 #        the output file name. If omitted, the output is displayed
 #        on-screen instead of being saved to a file.
-#    --paper-a=«sizecode»
-#        the paper size code: this is a number to which is prefixed the
-#        letter “A”; thus “4” represents the A4 paper size.
+#    --page-size=«pagesize»
+#        specifies the page size. This can be as 2 numbers in units of
+#        points, separated by a colon «width»:«height», or as a standard
+#        A-series size code (e.g. “A4”), or as the word “auto”, which means
+#        it is computed to just fit the text, with a minimal margin.
+#        If omitted, defaults to “auto”.
+#        “auto” cannot be specified for both --page-size and --size.
 #    --size=«textsize»
-#        the text size to use. Defaults to 144 points.
+#        the text size to use. Can be specified as a number, or as
+#        the word “auto”, which means the text is sized to fit the
+#        page, with a minimal margin. Defaults to 144 points.
+#        “auto” cannot be specified for both --page-size and --size.
 #    --svg
 #        render the output in vector SVG rather than PNG bitmap format.
 #    --transparent
@@ -80,10 +87,21 @@ opts, text = getopt.getopt \
   (
     sys.argv[1:],
     "f:",
-    ("dpi=", "feature=", "font=", "noshaping", "out=", "paper-a=", "size=", "svg", "transparent")
+    (
+        "dpi=",
+        "feature=",
+        "font=",
+        "noshaping",
+        "out=",
+        "page-size=",
+        "size=",
+        "svg",
+        "transparent",
+    )
   )
 dpi = qah.base_dpi
-paper_a = 4
+page_size = "auto"
+page_margin = Vector(10, 10)
 text_size = 144
 font_spec = "serif"
 outfilename = None
@@ -103,11 +121,27 @@ for keyword, value in opts :
         use_hb = False
     elif keyword == "--out" :
         outfilename = value
-    elif keyword == "--paper-a" :
-        paper_a = int(value)
+    elif keyword == "--page-size" :
+        if value == "auto" :
+            page_size = value
+        elif value.startswith("a") or value.startswith("A") :
+            page_size = a_paper_size(int(value[1:]))
+        elif ":" in value :
+            page_size = Vector(*tuple(float(x) for x in value.split(":", 1)))
+        else :
+            raise getopt.GetoptError \
+              (
+                "unrecognized value for --page-size: should be A«n»,"
+                " «width»:«height» or “auto”"
+              )
+        #end if
     elif keyword == "--size" :
-        text_size = float(value)
-        assert text_size > 0
+        if value == "auto" :
+            text_size = "auto"
+        else :
+            text_size = float(value)
+            assert text_size > 0
+        #end if
     elif keyword == "--svg" :
         out_svg = True
     elif keyword == "--transparent" :
@@ -117,105 +151,147 @@ for keyword, value in opts :
 if len(text) == 0 :
     raise getopt.GetoptError("nothing to draw")
 #end if
-paper_size = a_paper_size(paper_a)
-sys.stderr.write("paper size = %s\n" % repr(paper_size)) # debug
+if text_size == "auto" and page_size == "auto" :
+    raise getopt.GetoptError \
+      (
+        "--size and --page-size cannot both be auto -- need to determine one from the other"
+      )
+#end if
+sys.stderr.write("paper size = %s\n" % repr(page_size)) # debug
 
 ft_face = ft.find_face(font_spec)
 sys.stderr.write("font = %s\n" % ft_face.family_name) # debug
-ft_face.set_char_size(size = text_size, resolution = qah.base_dpi)
-line_spacing = ft_face.size["metrics"]["height"]
-baseline_offset = (ft_face.size["metrics"]["ascender"] + ft_face.size["metrics"]["descender"]) / 2
 
-if outfilename == None :
-    proc_display = subprocess.Popen \
-      (
-        args = ("display", "/dev/stdin"),
-        stdin = subprocess.PIPE
-      )
-else :
-    proc_display = None
-#end if
+measure_text_size = qah.base_dpi # anything reasonable, really
+do_render = text_size != "auto" and page_size != "auto"
+  # False if I need to do a measurement pass first
+while True :
+    use_text_size = (measure_text_size, text_size)[do_render]
+    ft_face.set_char_size(size = use_text_size, resolution = qah.base_dpi)
+    line_spacing = ft_face.size["metrics"]["height"]
+    baseline_offset = \
+        (
+            (ft_face.size["metrics"]["ascender"] + ft_face.size["metrics"]["descender"])
+        /
+            2
+        )
 
-if out_svg :
-    pix = qah.SVGSurface.create \
-      (
-        filename =
-            (
-                lambda : outfilename,
-                lambda : "/dev/fd/%d" % proc_display.stdin.fileno(),
-            )[outfilename == None](),
-        dimensions_in_points = paper_size
-      )
-    dpi = qah.base_dpi
-else :
-    pix = qah.ImageSurface.create \
-      (
-        format = (CAIRO.FORMAT_RGB24, CAIRO.FORMAT_ARGB32)[transparent],
-        dimensions = round(paper_size * dpi / qah.base_dpi)
-      )
-#end if
-ctx = \
-    (qah.Context.create(pix)
-        .scale(dpi / qah.base_dpi)
-        .set_source_colour((Colour.grey(1), Colour.grey(0, 0))[transparent])
-        .paint()
-        .set_source_colour(Colour.grey(0))
+    if do_render :
+        if outfilename == None :
+            proc_display = subprocess.Popen \
+              (
+                args = ("display", "/dev/stdin"),
+                stdin = subprocess.PIPE
+              )
+        else :
+            proc_display = None
+        #end if
+
+        if out_svg :
+            pix = qah.SVGSurface.create \
+              (
+                filename =
+                    (
+                        lambda : outfilename,
+                        lambda : "/dev/fd/%d" % proc_display.stdin.fileno(),
+                    )[outfilename == None](),
+                dimensions_in_points = page_size
+              )
+            dpi = qah.base_dpi
+        else :
+            pix = qah.ImageSurface.create \
+              (
+                format = (CAIRO.FORMAT_RGB24, CAIRO.FORMAT_ARGB32)[transparent],
+                dimensions = round(page_size * dpi / qah.base_dpi)
+              )
+        #end if
+        ctx = \
+            (qah.Context.create(pix)
+                .scale(dpi / qah.base_dpi)
+                .set_source_colour((Colour.grey(1), Colour.grey(0, 0))[transparent])
+                .paint()
+                .set_source_colour(Colour.grey(0))
+            )
+    else :
+        ctx = qah.Context.create_for_dummy()
+    #end if
+    (ctx
         #.set_font_face(qah.FontFace.create_for_ft_face(ft_face))
         .set_font_face(qah.FontFace.create_for_pattern(font_spec))
           # need to give Cairo its own copy of FT.Face to avoid interfering with
           # HarfBuzz’s glyph positioning--happens at non-default DPI settings
-        .set_font_size(text_size)
+        .set_font_size(use_text_size)
     )
-sys.stderr.write("ft ascender = %.3g, descender = %.3g\n" % (ft_face.size["metrics"]["ascender"], ft_face.size["metrics"]["descender"])) # debug
-sys.stderr.write("qah ascender = %.3g, descender = %.3g\n" % (ctx.font_extents.ascent, ctx.font_extents.descent)) # debug
-
-if use_hb :
-    buf = hb.Buffer.create()
-    hb_font = hb.Font.ft_create(ft_face)
-    hb_face = hb.Face.ft_create(ft_face); sys.stderr.write("font has glyph classes? %s\n" % hb_face.ot_layout_has_glyph_classes) # debug
-    if len(hb_features) == 0 :
-        hb_features = tuple \
-          (
-            hb.Feature(tag = hb.HB.TAG(feature_tag), value = 1)
-            for feature_tag in (b'kern', b'liga')
-          )
-    #end if
-#end if
-
-baseline = (paper_size.y - line_spacing * (len(text) - 1)) / 2 + baseline_offset
-for line in text :
+    sys.stderr.write("ft ascender = %.3g, descender = %.3g\n" % (ft_face.size["metrics"]["ascender"], ft_face.size["metrics"]["descender"])) # debug
+    sys.stderr.write("qah ascender = %.3g, descender = %.3g\n" % (ctx.font_extents.ascent, ctx.font_extents.descent)) # debug
     if use_hb :
-        buf.reset()
-        buf.add_str(line)
-        buf.guess_segment_properties()
-        hb.shape(hb_font, buf, hb_features)
-        glyphs = buf.get_glyphs()[0]
-    else :
-        glyphs = ctx.scaled_font.text_to_glyphs(Vector(0, 0), line)[0]
+        buf = hb.Buffer.create()
+        hb_font = hb.Font.ft_create(ft_face)
+        hb_face = hb.Face.ft_create(ft_face); sys.stderr.write("font has glyph classes? %s\n" % hb_face.ot_layout_has_glyph_classes) # debug
+        if len(hb_features) == 0 :
+            hb_features = tuple \
+              (
+                hb.Feature(tag = hb.HB.TAG(feature_tag), value = 1)
+                for feature_tag in (b'kern', b'liga')
+              )
+        #end if
     #end if
-    if out_svg :
-        ctx.new_path()
-        ctx.glyph_path \
-          (
-            tuple(qah.offset_glyphs
+
+    if do_render :
+        baseline = (page_size.y - line_spacing * (len(text) - 1)) / 2 + baseline_offset
+    else :
+        baseline = baseline_offset
+        page_bounds = qah.Rect(0, 0, 0, 0)
+    #end if
+    for line in text :
+        if use_hb :
+            buf.reset()
+            buf.add_str(line)
+            buf.guess_segment_properties()
+            hb.shape(hb_font, buf, hb_features)
+            glyphs = buf.get_glyphs()[0]
+        else :
+            glyphs = ctx.scaled_font.text_to_glyphs(Vector(0, 0), line)[0]
+        #end if
+        if do_render :
+            glyphs = tuple(qah.offset_glyphs
               (
                 glyphs,
-                Vector((paper_size.x - ctx.glyph_extents(glyphs).advance.x) / 2, baseline)
+                Vector((page_size.x - ctx.glyph_extents(glyphs).advance.x) / 2, baseline)
               ))
-          )
-        ctx.fill()
-    else :
-        ctx.show_glyphs \
-          (
-            tuple(qah.offset_glyphs
-              (
-                glyphs,
-                Vector((paper_size.x - ctx.glyph_extents(glyphs).advance.x) / 2, baseline)
-              ))
-          )
+            if out_svg :
+                ctx.new_path()
+                ctx.glyph_path(glyphs)
+                ctx.fill()
+            else :
+                ctx.show_glyphs(glyphs)
+            #end if
+        else :
+            sys.stderr.write("bounds of glyphs %s before offset: %s\n" % (repr(glyphs), repr(ctx.glyph_extents(glyphs).bounds))) # debug
+            # Note that offset_glyphs does not affect returned TextExtents
+            page_bounds |= ctx.glyph_extents(glyphs).bounds + Vector(0, baseline)
+        #end if
+        baseline += line_spacing
+    #end for
+
+    if do_render :
+        break
+    do_render = True
+
+    # compute actual size to use
+    if text_size == "auto" :
+        text_size = \
+            (
+                measure_text_size
+            *
+                min(tuple((page_size - page_margin) / page_bounds.dimensions))
+            )
+    elif page_size == "auto" :
+        page_size = page_bounds.dimensions * text_size / measure_text_size + page_margin
     #end if
-    baseline += line_spacing
-#end for
+
+    # and on to render pass
+#end while
 
 pix.flush()
 if out_svg :
