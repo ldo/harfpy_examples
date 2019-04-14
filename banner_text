@@ -11,7 +11,7 @@
 #
 #    --dpi=«dpi»
 #        the output resolution at which to render the page. Defaults to 72.
-#    --feature=«feature»
+#    --feature=«feature», -f«feature»
 #        specifies a font feature to enable/disable. This follows the usual
 #        HarfBuzz syntax of the four-character feature code, optionally preceded
 #        by a plus or minus sign, e.g. “kern” or “+kern” to enable kerning, “-kern”
@@ -79,7 +79,7 @@ def a_paper_size(num) :
 opts, text = getopt.getopt \
   (
     sys.argv[1:],
-    "",
+    "f:",
     ("dpi=", "feature=", "font=", "noshaping", "out=", "paper-a=", "size=", "svg", "transparent")
   )
 dpi = qah.base_dpi
@@ -95,7 +95,7 @@ for keyword, value in opts :
     if keyword == "--dpi" :
         dpi = float(value)
         assert dpi > 0
-    elif keyword == "--feature" :
+    elif keyword == "-f" or keyword == "--feature" :
         hb_features.append(hb.Feature.from_string(value))
     elif keyword == "--font" :
         font_spec = value
