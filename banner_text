@@ -283,10 +283,10 @@ while True :
             (
                 measure_text_size
             *
-                min(tuple((page_size - page_margin) / page_bounds.dimensions))
+                min(tuple((page_size - 2 * page_margin) / page_bounds.dimensions))
             )
     elif page_size == "auto" :
-        page_size = page_bounds.dimensions * text_size / measure_text_size + page_margin
+        page_size = page_bounds.dimensions * text_size / measure_text_size + 2 * page_margin
     #end if
 
     # and on to render pass
