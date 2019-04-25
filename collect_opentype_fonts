@@ -1,10 +1,28 @@
 #!/usr/bin/python3
 #+
-# Compile a database of all installed fonts that offer OpenType font features,
-# together with what features they support. The /usr/share/fonts directory
-# is scanned, and an SQLite database called ot_fonts.db is created in the
-# current directory and filled in with details of all font features found
+# This script compiles a database of all installed fonts that offer OpenType
+# font features, together with what features they support. The /usr/share/fonts
+# directory is scanned, and an SQLite database called ot_fonts.db is created in
+# the current directory and filled in with details of all font features found
 # for all OpenType-supporting fonts.
+#
+# This database can be used to do some useful queries on your installed fonts.
+# For example, tally up which font features are supported by installed fonts,
+# and how many there are for each feature:
+#
+#     select tag, count(*) from font_features group by tag;
+#
+# A variation of the above: order the listing by number of fonts supporting
+# each feature, to see which are the most popular:
+#
+#     select tag, count(*) as nr_fonts from font_features
+#         group by tag order by nr_fonts desc;
+#
+# Or, which fonts support a given font feature (in this case, “hlig”,
+# historical ligatures):
+#
+#     select family, style, fonts.filename as filename from fonts
+#         natural join font_features where tag = "hlig";
 #
 # Copyright 2019 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
 # script is licensed CC0
