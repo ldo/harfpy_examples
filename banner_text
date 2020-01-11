@@ -44,7 +44,7 @@
 #
 # External program needed: ImageMagick for on-screen display.
 #
-# Copyright 2019 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
+# Copyright 2020 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>. This
 # script is licensed CC0
 # <https://creativecommons.org/publicdomain/zero/1.0/>; do with it
 # what you will.
@@ -241,7 +241,7 @@ while True :
         baseline = (page_size.y - line_spacing * (len(text) - 1)) / 2 + baseline_offset
     else :
         baseline = baseline_offset
-        page_bounds = qah.Rect.empty
+        page_width = 0
     #end if
     for line in text :
         if use_hb :
@@ -268,7 +268,7 @@ while True :
             #end if
         else :
             # Note that offset_glyphs does not affect returned TextExtents
-            page_bounds |= ctx.glyph_extents(glyphs).bounds + Vector(0, baseline)
+            page_width = max(page_width, ctx.glyph_extents(glyphs).bounds.width)
         #end if
         baseline += line_spacing
     #end for
@@ -283,10 +283,10 @@ while True :
             (
                 measure_text_size
             *
-                min(tuple((page_size - 2 * page_margin) / page_bounds.dimensions))
+                min(tuple((page_size - 2 * page_margin) / page_size))
             )
     elif page_size == "auto" :
-        page_size = page_bounds.dimensions * text_size / measure_text_size + 2 * page_margin
+        page_size = Vector(page_width, line_spacing * len(text)) * text_size / measure_text_size + 2 * page_margin
     #end if
 
     # and on to render pass
