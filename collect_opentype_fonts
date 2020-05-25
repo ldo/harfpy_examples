@@ -95,6 +95,7 @@ cu.execute \
 nr_fonts = 0
 total_fonts = 0
 nr_features = 0
+cu.execute("begin transaction")
 for dirpath, dirnames, filenames in os.walk("/usr/share/fonts") :
     for filename in filenames :
          if filename.endswith((".otf", ".ttf", ".ttc")) :
@@ -201,6 +202,7 @@ for dirpath, dirnames, filenames in os.walk("/usr/share/fonts") :
         #end if
     #end for
 #end for
+cu.execute("end transaction")
 cu.close()
 elapsed = time.time() - start
 sys.stdout.write \
