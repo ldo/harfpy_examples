@@ -6,6 +6,11 @@
 # the current directory and filled in with details of all font features found
 # for all OpenType-supporting fonts.
 #
+# A slightly more general version of this script, which uses Fontconfig to
+# find all your installed fonts, is included in my python_fontconfig_examples
+# repo <https://gitlab.com/ldo/python_fontconfig_examples>,
+# <https://github.com/ldo/python_fontconfig_examples>.
+#
 # This database can be used to do some useful queries on your installed fonts.
 # For example, tally up which font features are supported by installed fonts,
 # and how many there are for each feature:
@@ -96,6 +101,7 @@ nr_fonts = 0
 total_fonts = 0
 nr_features = 0
 cu.execute("begin transaction")
+  # batching multiple insertions into a single transaction really speeds things up
 for dirpath, dirnames, filenames in os.walk("/usr/share/fonts") :
     for filename in filenames :
          if filename.endswith((".otf", ".ttf", ".ttc")) :
@@ -164,7 +170,6 @@ for dirpath, dirnames, filenames in os.walk("/usr/share/fonts") :
                           )
                         nr_fonts += 1
                         nr_features += len(feature_tags)
-                        # batching insertion of multiple features at once really speeds things up
                         cu.execute \
                           (
                                 "insert into font_features(filename, fileindex, tag) values "
