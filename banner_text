@@ -163,11 +163,26 @@ ft_face = ft.find_face(font_spec)
 sys.stderr.write("font = %s\n" % ft_face.family_name) # debug
 
 measure_text_size = qah.base_dpi # anything reasonable, really
+is_bitmap = len(ft_face.available_sizes) != 0
+if is_bitmap :
+    # bitmap font, set_char_size call will trigger FreeType error 23, “invalid pixel size”
+    sys.stderr.write("fixed sizes = %s\n" % repr(ft_face.available_sizes)) # debug
+    size_diff = list((abs(s["size"] - text_size)) for s in ft_face.available_sizes)
+    size_diff = list(s - m for m in (min(size_diff),) for s in size_diff)
+    best_size = list(i for i, s in enumerate(size_diff) if s == 0)[0]
+    sys.stderr.write("fixed sizes = %s, best = %d\n" % (repr(ft_face.available_sizes), best_size)) # debug
+    use_text_size = ft_face.available_sizes[best_size]["size"]
+    measure_text_size = use_text_size # defeat any scaling of metrics
+#end if
 do_render = text_size != "auto" and page_size != "auto"
   # False if I need to do a measurement pass first
 while True :
-    use_text_size = (measure_text_size, text_size)[do_render]
-    ft_face.set_char_size(size = use_text_size, resolution = qah.base_dpi)
+    if is_bitmap :
+        ft_face.select_size(best_size)
+    else :
+        use_text_size = (measure_text_size, text_size)[do_render]
+        ft_face.set_char_size(size = use_text_size, resolution = qah.base_dpi)
+    #end if
     line_spacing = ft_face.size["metrics"]["height"]
     baseline_offset = \
         (
