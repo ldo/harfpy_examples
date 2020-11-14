@@ -48,27 +48,19 @@ dpi = qah.base_dpi
 label_font_name = "sans-serif" # something acceptable to toy font face API only for now
 title_size = 48
 label_size = title_size * 0.5
+emoji_size = 72
 
 emoji_ft = ft.find_face(emoji_font_spec)
 if emoji_ft.family_name != emoji_font_spec :
     raise RuntimeError("need %s font to display properly" % emoji_font_spec)
 #end if
-assert len(emoji_ft.available_sizes) != 0, "expecting a bitmap font"
-if False :
-    # getting symbol metrics from FreeType
-    # assume largest size is last element of available_sizes
-    emoji_size = emoji_ft.available_sizes[-1]["size"]
-    emoji_ft.select_size(len(emoji_ft.available_sizes) - 1)
-    symbol_height = emoji_ft.size["metrics"]["height"]
-    symbol_width = 2 * emoji_size # good enough for these symbols
-    baseline_offset = \
-        (
-            (emoji_ft.size["metrics"]["ascender"] + emoji_ft.size["metrics"]["descender"])
-        /
-            2
-        )
-    baseline_offset = emoji_ft.size["metrics"]["ascender"] # debug
-    sys.stderr.write("emoji baseline offset = %.3f + %.3f = %.3f\n" % (emoji_ft.size["metrics"]["ascender"], emoji_ft.size["metrics"]["descender"], baseline_offset)) # debug
+if len(emoji_ft.available_sizes) != 0 :
+    sys.stderr.write \
+      (
+            "Bitmap font found, maximum size = %s\n"
+        %
+            max(s["size"] for s in emoji_ft.available_sizes)
+      )
 #end if
 buf = hb.Buffer.create()
 emoji_hb = hb.Font.ft_create(emoji_ft)
@@ -84,33 +76,16 @@ label_font = gx.scaled_font
 max_label_ascender = label_font.font_extents.ascent
 max_label_descender = label_font.font_extents.descent
 sys.stderr.write("title asc/desc = %.3f/%.3f, label asc/desc = %.3f/%.3f\n" % (max_title_ascender, max_title_descender, max_label_ascender, max_label_descender)) # debug
-if False :
-    emoji_qah = \
-        (gx
-            #.set_font_face(qah.FontFace.create_for_ft_face(emoji_ft))
-            .set_font_face(qah.FontFace.create_for_pattern(emoji_font_spec))
-              # need to give Cairo its own copy of FT.Face to avoid interfering with
-              # HarfBuzz’s glyph positioning--happens at non-default DPI settings
-            .set_font_size(emoji_size)
-            .scaled_font
-        )
-else :
-    (gx
-        #.set_font_face(qah.FontFace.create_for_ft_face(emoji_ft))
-        .set_font_face(qah.FontFace.create_for_pattern(emoji_font_spec))
-          # need to give Cairo its own copy of FT.Face to avoid interfering with
-          # HarfBuzz’s glyph positioning--happens at non-default DPI settings
-    )
-#end if
-if True :
-    # derive symbol metrics entirely from Cairo rather than FreeType
-    emoji_size = 72
-    gx.set_font_size(emoji_size)
-    emoji_qah = gx.scaled_font
-    symbol_height = emoji_qah.font_extents.height
-    symbol_width = 3 * emoji_size # good enough for these symbols
-    baseline_offset = emoji_qah.font_extents.ascent
-#end if
+#gx.set_font_face(qah.FontFace.create_for_ft_face(emoji_ft))
+gx.set_font_face(qah.FontFace.create_for_pattern(emoji_font_spec))
+  # need to give Cairo its own copy of FT.Face to avoid interfering with
+  # HarfBuzz’s glyph positioning--happens at non-default DPI settings
+# derive symbol metrics entirely from Cairo rather than FreeType
+gx.set_font_size(emoji_size)
+emoji_qah = gx.scaled_font
+symbol_height = emoji_qah.font_extents.height
+symbol_width = 3 * emoji_size # good enough for these symbols
+baseline_offset = emoji_qah.font_extents.ascent
 
 iso_3166 = json.load(open(iso_3166_defs, "rt"))["3166-1"]
 region_names = sorted(((r["alpha_2"], r["name"]) for r in iso_3166), key = lambda r : r[1])
