@@ -75,7 +75,6 @@ gx.set_font_size(label_size)
 label_font = gx.scaled_font
 max_label_ascender = label_font.font_extents.ascent
 max_label_descender = label_font.font_extents.descent
-sys.stderr.write("title asc/desc = %.3f/%.3f, label asc/desc = %.3f/%.3f\n" % (max_title_ascender, max_title_descender, max_label_ascender, max_label_descender)) # debug
 #gx.set_font_face(qah.FontFace.create_for_ft_face(emoji_ft))
 gx.set_font_face(qah.FontFace.create_for_pattern(emoji_font_spec))
   # need to give Cairo its own copy of FT.Face to avoid interfering with
@@ -102,7 +101,6 @@ figure_dims = \
     +
         margin
     )
-sys.stderr.write("figure dims = (%d, %d) * %s = %s\n" % (nr_cols, nr_rows, cell_step, figure_dims)) # debug
 pix = qah.ImageSurface.create \
   (
     format = CAIRO.FORMAT_RGB24,
@@ -119,7 +117,6 @@ gx = \
 title = "Region Codes & Flags From %s" % emoji_font_spec
 gx.scaled_font = title_font
 gx.move_to(((figure_dims.x - gx.text_extents(title).x_advance) / 2, margin.y + max_title_ascender))
-sys.stderr.write("title at %s\n" % repr(gx.current_point)) # debug
 gx.show_text(title)
 
 col = row = 0
