@@ -13,6 +13,7 @@
 import sys
 import os
 import math
+import unicodedata
 import json
 # import freetype2 as ft # use Qahirah instance
 import qahirah as qah
@@ -87,7 +88,7 @@ symbol_width = 3 * emoji_size # good enough for these symbols
 baseline_offset = emoji_qah.font_extents.ascent
 
 iso_3166 = json.load(open(iso_3166_defs, "rt"))["3166-1"]
-region_names = sorted(((r["alpha_2"], r["name"]) for r in iso_3166), key = lambda r : r[1])
+region_names = sorted(((r["alpha_2"], r["name"]) for r in iso_3166), key = lambda r : unicodedata.normalize("NFD", r[1]))
 
 nr_regions = len(region_names)
 nr_cols = math.ceil(math.sqrt(nr_regions))
