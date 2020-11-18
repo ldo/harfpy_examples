@@ -43,6 +43,8 @@ emoji_font_spec = "Noto Color Emoji"
   # do any others have these symbols?
 iso_3166_defs = "/usr/share/iso-codes/json/iso_3166-1.json"
   # comes from “iso-codes” package in Debian and derivatives
+extra_regions = [("EU", "European Union"), ("UN", "United Nations")]
+  # ones not in iso-codes, but defined in font
 margin = Vector(10, 10)
 dpi = qah.base_dpi
 
@@ -88,7 +90,11 @@ symbol_width = 3 * emoji_size # good enough for these symbols
 baseline_offset = emoji_qah.font_extents.ascent
 
 iso_3166 = json.load(open(iso_3166_defs, "rt"))["3166-1"]
-region_names = sorted(((r["alpha_2"], r["name"]) for r in iso_3166), key = lambda r : unicodedata.normalize("NFD", r[1]))
+region_names = sorted \
+  (
+    list((r["alpha_2"], r["name"]) for r in iso_3166) + extra_regions,
+    key = lambda r : unicodedata.normalize("NFD", r[1])
+  )
 
 nr_regions = len(region_names)
 nr_cols = math.ceil(math.sqrt(nr_regions))
