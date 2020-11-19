@@ -45,9 +45,9 @@ iso_3166_defs = "/usr/share/iso-codes/json/iso_3166-1.json"
   # comes from “iso-codes” package in Debian and derivatives
 extra_regions = [("EU", "European Union"), ("UN", "United Nations")]
   # ones not in iso-codes, but defined in font
-#extra_regions += [("ZZ", "?0nosuch")] # shows flag for undefined code
-#extra_regions += [("AC", "?1"), ("CP", "?2"), ("DG", "?3"), ("EA", "?4"), ("IC", "?5"), ("TA", "?6"), ("XK", "?7")]
-  # also defined in font -- what regions are these?
+#extra_regions += [("ZZ", "?0nosuch")] # one of those that shows flag for undefined code
+#extra_regions += [("AC", "Ascension Island (GB)"), ("CP", "Clipperton Island (FR)"), ("DG", "Diego Garcia (GB)"), ("EA", "Ceuta, Melilla (ES)"), ("IC", "Canary Islands (ES)"), ("TA", "Tristan da Cunha (GB)"), ("XK", "Kosovo")]
+  # also defined in font -- meanings found from <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>
 margin = Vector(10, 10)
 dpi = qah.base_dpi
 
