@@ -229,6 +229,7 @@ while True :
             )
     else :
         ctx = qah.Context.create_for_dummy()
+          # calculating only
     #end if
     (ctx
         #.set_font_face(qah.FontFace.create_for_ft_face(ft_face))
@@ -301,7 +302,16 @@ while True :
                 min(tuple((page_size - 2 * page_margin) / page_size))
             )
     elif page_size == "auto" :
-        page_size = Vector(page_width, line_spacing * len(text)) * text_size / measure_text_size + 2 * page_margin
+        page_size = \
+            (
+                    Vector(page_width, line_spacing * len(text))
+                *
+                    text_size
+                /
+                    measure_text_size
+            +
+                2 * page_margin
+            )
     #end if
 
     # and on to render pass
