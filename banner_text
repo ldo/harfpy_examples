@@ -19,7 +19,7 @@
 #        <https://www.microsoft.com/typography/otspec/featurelist.htm>, but the
 #        actual ones supported (if any) depend on the font.
 #    --font=«fontspec»
-#        a Fontconfig pattern string specifying the font to use.
+#        a Fontconfig pattern string, or a font filename, specifying the font to use.
 #    --noshaping
 #        turn off HarfBuzz shaping. Useful for comparisons.
 #    --out=«outfilename»
@@ -78,6 +78,8 @@ def a_paper_size(num) :
     return \
         round(a1_dims / 2 ** ((num - 0.5) / 2))
 #end a_paper_size
+
+fontfile_extensions = (".otf", ".ttf")
 
 #+
 # Mainline
@@ -159,7 +161,14 @@ if text_size == "auto" and page_size == "auto" :
 #end if
 sys.stderr.write("paper size = %s\n" % repr(page_size)) # debug
 
-ft_face = ft.find_face(font_spec)
+if font_spec.find("/") >= 0 or font_spec.endswith(fontfile_extensions) :
+    # interpret as filename
+    ft_face = ft.new_face(font_spec)
+    qah_face = qah.FontFace.create_for_file(font_spec)
+else :
+    ft_face = ft.find_face(font_spec)
+    qah_face = qah.FontFace.create_for_pattern(font_spec)
+#end if
 sys.stderr.write("font = %s\n" % ft_face.family_name) # debug
 
 measure_text_size = qah.base_dpi # anything reasonable, really
@@ -233,7 +242,7 @@ while True :
     #end if
     (ctx
         #.set_font_face(qah.FontFace.create_for_ft_face(ft_face))
-        .set_font_face(qah.FontFace.create_for_pattern(font_spec))
+        .set_font_face(qah_face)
           # need to give Cairo its own copy of FT.Face to avoid interfering with
           # HarfBuzz’s glyph positioning--happens at non-default DPI settings
         .set_font_size(use_text_size)
