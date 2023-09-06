@@ -9,7 +9,7 @@
 # A slightly more general version of this script, which uses Fontconfig to
 # find all your installed fonts, is included in my python_fontconfig_examples
 # repo <https://gitlab.com/ldo/python_fontconfig_examples>,
-# <https://github.com/ldo/python_fontconfig_examples>.
+# <https://bitbucket.org/ldo17/python_fontconfig_examples>.
 #
 # This database can be used to do some useful queries on your installed fonts.
 # For example, tally up which font features are supported by installed fonts,
